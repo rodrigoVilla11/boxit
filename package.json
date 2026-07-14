@@ -1,0 +1,22 @@
+{
+  "name": "box-it",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BOX iT — PWA mobile-first de tracking de entrenos",
+  "scripts": {
+    "dev:db": "docker compose up -d db",
+    "dev:db:down": "docker compose down",
+    "dev:api": "pnpm --filter @box-it/api start:dev",
+    "dev:web": "pnpm --filter @box-it/web dev",
+    "db:migrate": "pnpm --filter @box-it/api prisma:migrate",
+    "db:deploy": "pnpm --filter @box-it/api prisma:deploy",
+    "db:seed": "pnpm --filter @box-it/api prisma:seed",
+    "db:reset": "pnpm --filter @box-it/api prisma:reset",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.6.0"
+}

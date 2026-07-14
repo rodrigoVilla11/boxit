@@ -1,0 +1,24 @@
+# Desarrollo: solo Postgres. La API y el web corren en tu máquina con pnpm.
+services:
+  db:
+    image: postgres:17
+    container_name: boxit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-boxit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-boxit}
+      POSTGRES_DB: ${POSTGRES_DB:-boxit}
+    ports:
+      # Host port configurable (default 5432). En esta máquina usamos 5433
+      # porque el 5432 ya está tomado por otro proyecto.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - boxit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-boxit} -d ${POSTGRES_DB:-boxit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  boxit_pgdata:
