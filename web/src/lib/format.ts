@@ -23,3 +23,14 @@ export function formatDate(iso: string | null): string {
     month: 'short',
   });
 }
+
+/** Fecha de sesión: "mié 14 jul" (con mayúscula inicial). */
+export function formatSessionDate(iso: string | null): string {
+  if (!iso) return '';
+  const s = new Date(iso).toLocaleDateString('es-AR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

@@ -140,6 +140,49 @@ export async function getPrevious(exerciseId: string): Promise<PreviousSession> 
   return json<PreviousSession>(res, 'No pudimos cargar el anterior.');
 }
 
+// ---------- Historial / PRs ----------
+
+export type WorkoutExerciseSummary = {
+  id: string;
+  order: number;
+  exerciseId: string;
+  exercise: Exercise;
+};
+
+export type WorkoutSummary = {
+  id: string;
+  startedAt: string;
+  finishedAt: string | null;
+  durationSec: number;
+  totalVolume: number;
+  totalSets: number;
+  exercises: WorkoutExerciseSummary[];
+};
+
+export type PersonalRecord = {
+  exerciseId: string;
+  exerciseName: string;
+  weight: number;
+  reps: number;
+  workoutId: string;
+  achievedAt: string | null;
+};
+
+export async function getHistory(): Promise<WorkoutSummary[]> {
+  const res = await apiFetch('/api/workouts');
+  return json<WorkoutSummary[]>(res, 'No pudimos cargar el historial.');
+}
+
+export async function getWorkoutById(id: string): Promise<Workout> {
+  const res = await apiFetch(`/api/workouts/${id}`);
+  return json<Workout>(res, 'No pudimos cargar el entreno.');
+}
+
+export async function getPersonalRecords(): Promise<PersonalRecord[]> {
+  const res = await apiFetch('/api/workouts/prs');
+  return json<PersonalRecord[]>(res, 'No pudimos cargar los récords.');
+}
+
 /** Totales en vivo (misma regla que el back: warmups excluidos). */
 export function liveTotals(workout: Workout): { volume: number; sets: number } {
   const working = workout.exercises
