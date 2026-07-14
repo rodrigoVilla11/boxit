@@ -61,6 +61,31 @@ export class RoutinesService {
     return routine;
   }
 
+  async update(
+    userId: string,
+    id: string,
+    dto: CreateRoutineDto,
+  ): Promise<FullRoutine> {
+    await this.getOne(userId, id); // ownership (404 si no es tuya)
+    await this.assertExercisesExist(dto.exercises.map((e) => e.exerciseId));
+    return this.prisma.routine.update({
+      where: { id },
+      data: {
+        name: dto.name.trim(),
+        // reemplaza los ejercicios: borra los actuales y crea los nuevos
+        exercises: {
+          deleteMany: {},
+          create: dto.exercises.map((e, i) => ({
+            exerciseId: e.exerciseId,
+            order: i + 1,
+            targetSets: e.targetSets,
+          })),
+        },
+      },
+      include: fullRoutineInclude,
+    });
+  }
+
   async remove(userId: string, id: string): Promise<void> {
     await this.getOne(userId, id);
     await this.prisma.routine.delete({ where: { id } });
