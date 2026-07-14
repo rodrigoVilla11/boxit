@@ -1,6 +1,12 @@
 import { apiFetch, extractError } from './api-client';
+import type { WeightUnit } from './units';
 
-export type SessionUser = { id: string; email: string; name: string };
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  weightUnit: WeightUnit;
+};
 
 async function parse(res: Response): Promise<unknown> {
   return res.json().catch(() => ({}));
@@ -41,5 +47,17 @@ export async function getMe(): Promise<SessionUser | null> {
   const res = await apiFetch('/api/auth/me');
   if (!res.ok) return null;
   const data = await parse(res);
+  return (data as { user: SessionUser }).user;
+}
+
+export async function updateWeightUnit(
+  weightUnit: WeightUnit,
+): Promise<SessionUser> {
+  const res = await apiFetch('/api/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify({ weightUnit }),
+  });
+  const data = await parse(res);
+  if (!res.ok) throw new Error(extractError(data, 'No se pudo guardar.'));
   return (data as { user: SessionUser }).user;
 }

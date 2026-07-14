@@ -3,7 +3,9 @@
 import { LogOut, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { useNow } from '@/hooks/use-now';
-import { formatDuration, formatVolume } from '@/lib/format';
+import { useUnit } from '@/components/unit-provider';
+import { formatDuration } from '@/lib/format';
+import { formatVolume } from '@/lib/units';
 import { liveTotals, type Workout } from '@/lib/workouts';
 
 export function WorkoutHeader({
@@ -20,6 +22,7 @@ export function WorkoutHeader({
   onLogout: () => void;
 }) {
   const now = useNow(1000);
+  const { unit } = useUnit();
   const elapsed = Math.floor((now - new Date(workout.startedAt).getTime()) / 1000);
   const totals = liveTotals(workout);
 
@@ -63,7 +66,7 @@ export function WorkoutHeader({
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Metric label="Duración" value={formatDuration(elapsed)} />
-        <Metric label="Volumen" value={formatVolume(totals.volume)} />
+        <Metric label="Volumen" value={formatVolume(totals.volume, unit)} />
         <Metric label="Series" value={String(totals.sets)} />
       </div>
     </header>

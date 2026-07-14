@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Flame, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Menu, MenuItem } from '@/components/ui/menu';
+import { useUnit } from '@/components/unit-provider';
+import { displayToKg, kgToDisplay, roundDisplay, weightInputValue } from '@/lib/units';
 import type { PreviousSet, SetPatch, WorkoutSet } from '@/lib/workouts';
 
 const parseFloatSafe = (s: string): number => {
@@ -30,22 +32,38 @@ export function SetRow({
   onRemove: (setId: string) => void;
   onToggleWarmup: (setId: string, warmup: boolean) => void;
 }) {
-  const [weight, setWeight] = useState(set.weight ? String(set.weight) : '');
+  const { unit } = useUnit();
+  const [weight, setWeight] = useState(() => weightInputValue(set.weight, unit));
   const [reps, setReps] = useState(set.reps ? String(set.reps) : '');
+
+  // Reconvierte el input al cambiar de unidad (kg <-> lb)
+  useEffect(() => {
+    setWeight(weightInputValue(set.weight, unit));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit]);
 
   const isWarmup = set.type === 'WARMUP';
 
+  // El input está en la unidad de display; guardamos siempre en kg.
   const persist = () =>
-    onSave(set.id, { weight: parseFloatSafe(weight), reps: parseIntSafe(reps) });
+    onSave(set.id, {
+      weight: displayToKg(parseFloatSafe(weight), unit),
+      reps: parseIntSafe(reps),
+    });
 
   const toggleComplete = () =>
     onSave(set.id, {
       completed: !set.completed,
-      weight: parseFloatSafe(weight),
+      weight: displayToKg(parseFloatSafe(weight), unit),
       reps: parseIntSafe(reps),
     });
 
-  const prevText = previous ? `${previous.weight}×${previous.reps}` : '—';
+  const prevText = previous
+    ? `${roundDisplay(kgToDisplay(previous.weight, unit))}×${previous.reps}`
+    : '—';
+  const prevPlaceholder = previous
+    ? String(roundDisplay(kgToDisplay(previous.weight, unit)))
+    : '0';
 
   return (
     <div
@@ -54,7 +72,6 @@ export function SetRow({
         set.completed && 'row-done',
       )}
     >
-      {/* Serie / menú (warmup, eliminar) */}
       <Menu
         align="left"
         label="Opciones de la serie"
@@ -81,21 +98,18 @@ export function SetRow({
         </MenuItem>
       </Menu>
 
-      {/* Anterior */}
       <span className="truncate text-xs text-textMuted">{prevText}</span>
 
-      {/* Kg */}
       <input
         inputMode="decimal"
         value={weight}
-        placeholder={previous ? String(previous.weight) : '0'}
+        placeholder={prevPlaceholder}
         onChange={(e) => setWeight(e.target.value)}
         onBlur={persist}
-        aria-label={`Kg serie ${index + 1}`}
+        aria-label={`Peso serie ${index + 1}`}
         className="h-9 w-full rounded-lg bg-surfaceRaised text-center text-sm text-text outline-none focus:ring-2 focus:ring-primary"
       />
 
-      {/* Reps */}
       <input
         inputMode="numeric"
         value={reps}
@@ -106,7 +120,6 @@ export function SetRow({
         className="h-9 w-full rounded-lg bg-surfaceRaised text-center text-sm text-text outline-none focus:ring-2 focus:ring-primary"
       />
 
-      {/* Completar */}
       <button
         type="button"
         onClick={toggleComplete}

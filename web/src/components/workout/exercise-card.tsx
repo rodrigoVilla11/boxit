@@ -3,6 +3,8 @@
 import { MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { SetRow } from './set-row';
+import { useUnit } from '@/components/unit-provider';
+import { unitLabel } from '@/lib/units';
 import { muscleLabel } from '@/lib/labels';
 import type { PreviousSession, SetPatch, WorkoutExercise } from '@/lib/workouts';
 
@@ -23,6 +25,7 @@ export function ExerciseCard({
   onToggleWarmup: (setId: string, warmup: boolean) => void;
   onRemoveExercise: (workoutExerciseId: string) => void;
 }) {
+  const { unit } = useUnit();
   return (
     <section className="rounded-2xl bg-surface p-3 shadow-card">
       <header className="flex items-start justify-between px-1 pb-2">
@@ -53,7 +56,7 @@ export function ExerciseCard({
       <div className="grid grid-cols-[2rem_1fr_4.25rem_3.25rem_2.5rem] gap-2 px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-textMuted">
         <span>Serie</span>
         <span>Anterior</span>
-        <span className="text-center">Kg</span>
+        <span className="text-center">{unitLabel(unit)}</span>
         <span className="text-center">Reps</span>
         <span aria-hidden />
       </div>

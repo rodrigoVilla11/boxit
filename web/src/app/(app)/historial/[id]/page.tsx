@@ -5,7 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { Check, ChevronLeft, Loader2, Trophy } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { muscleLabel } from '@/lib/labels';
-import { formatDuration, formatSessionDate, formatVolume } from '@/lib/format';
+import { formatDuration, formatSessionDate } from '@/lib/format';
+import { formatVolume, kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
+import { useUnit } from '@/components/unit-provider';
 import {
   getPersonalRecords,
   getWorkoutById,
@@ -16,6 +18,7 @@ import {
 
 export default function SessionDetailPage() {
   const router = useRouter();
+  const { unit } = useUnit();
   const { id } = useParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [prByExercise, setPrByExercise] = useState<Record<string, PersonalRecord>>({});
@@ -75,7 +78,7 @@ export default function SessionDetailPage() {
       </header>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <Metric label="Volumen" value={formatVolume(workout.totalVolume)} />
+        <Metric label="Volumen" value={formatVolume(workout.totalVolume, unit)} />
         <Metric label="Duración" value={formatDuration(workout.durationSec)} />
         <Metric label="Series" value={String(workout.totalSets)} />
       </div>
@@ -120,6 +123,7 @@ function DetailSetRow({
   set: WorkoutSet;
   isPr: boolean;
 }) {
+  const { unit } = useUnit();
   const isWarmup = set.type === 'WARMUP';
   return (
     <div
@@ -140,8 +144,10 @@ function DetailSetRow({
       <span className="text-sm text-text">
         {set.weight > 0 ? (
           <>
-            <span className="font-semibold tabular-nums">{set.weight}</span>
-            <span className="text-textMuted"> kg × </span>
+            <span className="font-semibold tabular-nums">
+              {roundDisplay(kgToDisplay(set.weight, unit))}
+            </span>
+            <span className="text-textMuted"> {unitLabel(unit)} × </span>
             <span className="font-semibold tabular-nums">{set.reps}</span>
           </>
         ) : (

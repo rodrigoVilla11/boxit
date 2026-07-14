@@ -2,7 +2,9 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatDuration, formatVolume } from '@/lib/format';
+import { useUnit } from '@/components/unit-provider';
+import { formatDuration } from '@/lib/format';
+import { formatVolume } from '@/lib/units';
 import type { Workout } from '@/lib/workouts';
 
 export function FinishSummary({
@@ -12,6 +14,7 @@ export function FinishSummary({
   workout: Workout;
   onClose: () => void;
 }) {
+  const { unit } = useUnit();
   return (
     <div className="app-shell flex min-h-dvh flex-col items-center justify-center px-6 pb-safe pt-safe text-center">
       <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/15 ring-1 ring-primary/30">
@@ -22,7 +25,7 @@ export function FinishSummary({
 
       <div className="mt-8 grid w-full grid-cols-3 gap-2">
         <Stat label="Duración" value={formatDuration(workout.durationSec)} />
-        <Stat label="Volumen" value={formatVolume(workout.totalVolume)} />
+        <Stat label="Volumen" value={formatVolume(workout.totalVolume, unit)} />
         <Stat label="Series" value={String(workout.totalSets)} />
       </div>
 
