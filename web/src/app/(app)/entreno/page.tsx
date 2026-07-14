@@ -150,9 +150,8 @@ export default function EntrenoPage() {
       <ExercisePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onPick={async (id) => {
-          await wo.addExercise(id);
-          setPickerOpen(false);
+        onPick={async (ex) => {
+          await wo.addExercise(ex.id);
         }}
       />
 

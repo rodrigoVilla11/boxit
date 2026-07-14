@@ -15,10 +15,12 @@ export function ExercisePicker({
   open,
   onClose,
   onPick,
+  closeOnPick = true,
 }: {
   open: boolean;
   onClose: () => void;
-  onPick: (exerciseId: string) => void | Promise<void>;
+  onPick: (exercise: Exercise) => void | Promise<void>;
+  closeOnPick?: boolean;
 }) {
   const [items, setItems] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
@@ -46,10 +48,11 @@ export function ExercisePicker({
     );
   }, [items, query]);
 
-  async function pick(id: string) {
-    setAdding(id);
+  async function pick(exercise: Exercise) {
+    setAdding(exercise.id);
     try {
-      await onPick(id);
+      await onPick(exercise);
+      if (closeOnPick) onClose();
     } finally {
       setAdding(null);
     }
@@ -100,7 +103,7 @@ export function ExercisePicker({
               <li key={e.id}>
                 <button
                   type="button"
-                  onClick={() => pick(e.id)}
+                  onClick={() => pick(e)}
                   disabled={adding !== null}
                   className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99] disabled:opacity-60"
                 >
