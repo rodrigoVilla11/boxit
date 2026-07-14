@@ -17,8 +17,9 @@ PWA mobile-first de tracking de entrenos de gimnasio. Trackeá cada serie, en vi
 
 ```bash
 # 1) Variables de entorno
-cp .env.example .env
-cp .env.example api/.env      # Prisma/Nest leen de acá
+cp .env.example .env               # docker-compose (Postgres)
+cp .env.example api/.env           # Prisma/Nest leen de acá
+cp web/.env.example web/.env.local # Next lee de acá (NEXT_PUBLIC_API_URL)
 
 # 2) Instalar dependencias
 pnpm install
