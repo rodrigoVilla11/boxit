@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink text-text font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  /* La app es dark siempre; evitamos el flash de autofill claro */
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #f0f4f2;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  /* Contenedor mobile centrado, ~390px */
+  .app-shell {
+    @apply mx-auto w-full max-w-[430px];
+  }
+
+  /* Insets del notch / home indicator */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Tint de serie completada (verde al 15%) */
+  .row-done {
+    background-color: color-mix(in srgb, theme('colors.primary.DEFAULT') 15%, transparent);
+  }
+}
