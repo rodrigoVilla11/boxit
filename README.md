@@ -64,8 +64,8 @@ en el VPS.
 
 ## Fases
 
-1. **Scaffolding** ✅ (esta fase)
-2. Auth JWT con cookies httpOnly
+1. **Scaffolding** ✅
+2. **Auth JWT con cookies httpOnly** ✅
 3. API de entrenos
 4. Pantalla de entreno en vivo
 5. Rutinas / plantillas
