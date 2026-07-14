@@ -70,4 +70,4 @@ en el VPS.
 3. **API de entrenos** ✅
 4. **Pantalla de entreno en vivo** ✅
 5. **Rutinas / plantillas** ✅
-6. Historial + PRs
+6. **Historial + PRs** ✅

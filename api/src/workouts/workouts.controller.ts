@@ -31,10 +31,15 @@ export class WorkoutsController {
     return this.workouts.list(user.id);
   }
 
-  // OJO: 'active' debe ir antes que ':id'
+  // OJO: 'active' y 'prs' deben ir antes que ':id'
   @Get('active')
   active(@CurrentUser() user: AuthUser) {
     return this.workouts.active(user.id);
+  }
+
+  @Get('prs')
+  prs(@CurrentUser() user: AuthUser) {
+    return this.workouts.personalRecords(user.id);
   }
 
   @Get(':id')

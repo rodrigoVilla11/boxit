@@ -25,6 +25,24 @@ export type FullWorkout = Prisma.WorkoutGetPayload<{
   include: typeof fullWorkoutInclude;
 }>;
 
+// Resumen para el historial: ejercicios (con su info) pero sin las series.
+const historyInclude = {
+  exercises: { orderBy: { order: 'asc' }, include: { exercise: true } },
+} satisfies Prisma.WorkoutInclude;
+
+export type WorkoutSummary = Prisma.WorkoutGetPayload<{
+  include: typeof historyInclude;
+}>;
+
+export type PersonalRecord = {
+  exerciseId: string;
+  exerciseName: string;
+  weight: number;
+  reps: number;
+  workoutId: string;
+  achievedAt: Date | null;
+};
+
 @Injectable()
 export class WorkoutsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -47,11 +65,62 @@ export class WorkoutsService {
     return this.findFull(workout.id);
   }
 
-  list(userId: string): Promise<Workout[]> {
+  /** Historial: entrenos terminados, más recientes primero. */
+  list(userId: string): Promise<WorkoutSummary[]> {
     return this.prisma.workout.findMany({
-      where: { userId },
-      orderBy: { startedAt: 'desc' },
+      where: { userId, finishedAt: { not: null } },
+      orderBy: { finishedAt: 'desc' },
+      include: historyInclude,
     });
+  }
+
+  /** Récords: mejor peso por ejercicio (solo series de trabajo completadas). */
+  async personalRecords(userId: string): Promise<PersonalRecord[]> {
+    const sets = await this.prisma.workoutSet.findMany({
+      where: {
+        completed: true,
+        type: 'NORMAL',
+        weight: { gt: 0 },
+        workoutExercise: {
+          workout: { userId, finishedAt: { not: null } },
+        },
+      },
+      select: {
+        weight: true,
+        reps: true,
+        workoutExercise: {
+          select: {
+            exerciseId: true,
+            exercise: { select: { name: true } },
+            workout: { select: { id: true, finishedAt: true } },
+          },
+        },
+      },
+    });
+
+    const best = new Map<string, PersonalRecord>();
+    for (const s of sets) {
+      const we = s.workoutExercise;
+      const current = best.get(we.exerciseId);
+      const better =
+        !current ||
+        s.weight > current.weight ||
+        (s.weight === current.weight && s.reps > current.reps);
+      if (better) {
+        best.set(we.exerciseId, {
+          exerciseId: we.exerciseId,
+          exerciseName: we.exercise.name,
+          weight: s.weight,
+          reps: s.reps,
+          workoutId: we.workout.id,
+          achievedAt: we.workout.finishedAt,
+        });
+      }
+    }
+
+    return [...best.values()].sort((a, b) =>
+      a.exerciseName.localeCompare(b.exerciseName, 'es'),
+    );
   }
 
   async active(userId: string): Promise<FullWorkout | null> {
