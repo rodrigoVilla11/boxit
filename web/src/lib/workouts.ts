@@ -162,6 +162,7 @@ export type WorkoutSummary = {
 export type PersonalRecord = {
   exerciseId: string;
   exerciseName: string;
+  metric: 'weight' | 'reps';
   weight: number;
   reps: number;
   workoutId: string;

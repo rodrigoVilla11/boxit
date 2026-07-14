@@ -69,9 +69,11 @@ function RecordsSection({ prs }: { prs: PersonalRecord[] }) {
           >
             <p className="truncate text-xs text-textMuted">{pr.exerciseName}</p>
             <p className="mt-1 font-display text-lg font-bold text-accentLime">
-              {pr.weight} kg
+              {pr.metric === 'weight' ? `${pr.weight} kg` : `${pr.reps} reps`}
             </p>
-            <p className="text-[11px] text-textMuted">{pr.reps} reps</p>
+            <p className="text-[11px] text-textMuted">
+              {pr.metric === 'weight' ? `${pr.reps} reps` : 'peso corporal'}
+            </p>
           </div>
         ))}
       </div>

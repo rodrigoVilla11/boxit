@@ -9,6 +9,7 @@ import { formatDuration, formatSessionDate, formatVolume } from '@/lib/format';
 import {
   getPersonalRecords,
   getWorkoutById,
+  type PersonalRecord,
   type Workout,
   type WorkoutSet,
 } from '@/lib/workouts';
@@ -17,7 +18,7 @@ export default function SessionDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [prByExercise, setPrByExercise] = useState<Record<string, number>>({});
+  const [prByExercise, setPrByExercise] = useState<Record<string, PersonalRecord>>({});
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -26,12 +27,17 @@ export default function SessionDetailPage() {
       .catch(() => setNotFound(true));
     getPersonalRecords()
       .then((prs) =>
-        setPrByExercise(
-          Object.fromEntries(prs.map((p) => [p.exerciseId, p.weight])),
-        ),
+        setPrByExercise(Object.fromEntries(prs.map((p) => [p.exerciseId, p]))),
       )
       .catch(() => {});
   }, [id]);
+
+  const isPrSet = (record: PersonalRecord | undefined, set: WorkoutSet): boolean => {
+    if (!record || !set.completed || set.type !== 'NORMAL') return false;
+    return record.metric === 'weight'
+      ? set.weight > 0 && set.weight === record.weight
+      : set.weight === 0 && set.reps === record.reps;
+  };
 
   if (notFound) {
     return (
@@ -93,13 +99,7 @@ export default function SessionDetailPage() {
                     key={set.id}
                     index={i}
                     set={set}
-                    isPr={
-                      set.completed &&
-                      set.type === 'NORMAL' &&
-                      set.weight > 0 &&
-                      record !== undefined &&
-                      set.weight === record
-                    }
+                    isPr={isPrSet(record, set)}
                   />
                 ))}
               </div>
@@ -138,9 +138,18 @@ function DetailSetRow({
       </span>
 
       <span className="text-sm text-text">
-        <span className="font-semibold tabular-nums">{set.weight}</span>
-        <span className="text-textMuted"> kg × </span>
-        <span className="font-semibold tabular-nums">{set.reps}</span>
+        {set.weight > 0 ? (
+          <>
+            <span className="font-semibold tabular-nums">{set.weight}</span>
+            <span className="text-textMuted"> kg × </span>
+            <span className="font-semibold tabular-nums">{set.reps}</span>
+          </>
+        ) : (
+          <>
+            <span className="font-semibold tabular-nums">{set.reps}</span>
+            <span className="text-textMuted"> reps</span>
+          </>
+        )}
       </span>
 
       <div className="flex items-center gap-2">
