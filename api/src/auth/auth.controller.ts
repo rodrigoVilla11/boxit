@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Patch,
   Post,
   Req,
   Res,
@@ -12,6 +13,7 @@ import { Request, Response } from 'express';
 import { AuthService, PublicUser } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from './decorators/current-user.decorator';
 import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies } from './auth.cookies';
@@ -69,5 +71,14 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async me(@CurrentUser() user: AuthUser): Promise<{ user: PublicUser }> {
     return { user: await this.auth.me(user.id) };
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateMeDto,
+  ): Promise<{ user: PublicUser }> {
+    return { user: await this.auth.updateWeightUnit(user.id, dto.weightUnit) };
   }
 }

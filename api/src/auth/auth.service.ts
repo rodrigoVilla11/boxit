@@ -7,14 +7,19 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
-import { User } from '@prisma/client';
+import { User, WeightUnit } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { IssuedTokens } from './auth.cookies';
 
-export type PublicUser = { id: string; email: string; name: string };
+export type PublicUser = {
+  id: string;
+  email: string;
+  name: string;
+  weightUnit: WeightUnit;
+};
 export type AuthResult = { user: PublicUser } & IssuedTokens;
 
 interface RefreshPayload {
@@ -49,7 +54,23 @@ export class AuthService {
   }
 
   private toPublic(u: User): PublicUser {
-    return { id: u.id, email: u.email, name: u.name };
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      weightUnit: u.weightUnit,
+    };
+  }
+
+  async updateWeightUnit(
+    userId: string,
+    weightUnit: WeightUnit,
+  ): Promise<PublicUser> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { weightUnit },
+    });
+    return this.toPublic(user);
   }
 
   async register(dto: RegisterDto): Promise<AuthResult> {

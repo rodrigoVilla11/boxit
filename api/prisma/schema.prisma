@@ -39,15 +39,21 @@ enum SetType {
   WARMUP
 }
 
+enum WeightUnit {
+  KG
+  LB
+}
+
 // ------------------------- Usuarios / Auth -----------------------
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
   name         String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  weightUnit   WeightUnit @default(KG)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   workouts      Workout[]
   routines      Routine[]
