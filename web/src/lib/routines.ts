@@ -33,6 +33,23 @@ export async function getRoutines(): Promise<Routine[]> {
   return json<Routine[]>(res, 'No pudimos cargar las rutinas.');
 }
 
+export async function getRoutine(id: string): Promise<Routine> {
+  const res = await apiFetch(`/api/routines/${id}`);
+  return json<Routine>(res, 'No pudimos cargar la rutina.');
+}
+
+export async function updateRoutine(
+  id: string,
+  name: string,
+  exercises: RoutineExerciseInput[],
+): Promise<Routine> {
+  const res = await apiFetch(`/api/routines/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name, exercises }),
+  });
+  return json<Routine>(res, 'No pudimos guardar la rutina.');
+}
+
 export async function createRoutine(
   name: string,
   exercises: RoutineExerciseInput[],

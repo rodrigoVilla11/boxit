@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ClipboardList, Loader2, MoreVertical, Play, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, Loader2, MoreVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { deleteRoutine, getRoutines, startRoutine, type Routine } from '@/lib/routines';
@@ -83,6 +83,7 @@ export default function RutinasPage() {
               starting={starting === routine.id}
               disabled={starting !== null}
               onStart={() => onStart(routine)}
+              onEdit={() => router.push(`/rutinas/${routine.id}/editar`)}
               onDelete={() => setToDelete(routine)}
             />
           ))
@@ -107,12 +108,14 @@ function RoutineCard({
   starting,
   disabled,
   onStart,
+  onEdit,
   onDelete,
 }: {
   routine: Routine;
   starting: boolean;
   disabled: boolean;
   onStart: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const totalSets = routine.exercises.reduce((a, e) => a + e.targetSets, 0);
@@ -132,6 +135,10 @@ function RoutineCard({
             </span>
           }
         >
+          <MenuItem onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+            Editar rutina
+          </MenuItem>
           <MenuItem danger onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
             Eliminar rutina
