@@ -69,5 +69,5 @@ en el VPS.
 2. **Auth JWT con cookies httpOnly** ✅
 3. **API de entrenos** ✅
 4. **Pantalla de entreno en vivo** ✅
-5. Rutinas / plantillas
+5. **Rutinas / plantillas** ✅
 6. Historial + PRs

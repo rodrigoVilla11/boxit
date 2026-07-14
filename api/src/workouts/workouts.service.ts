@@ -11,7 +11,7 @@ import { UpdateSetDto } from './dto/update-set.dto';
 import { computeDurationSec, computeWorkoutTotals } from './workouts.calc';
 
 // Entreno con ejercicios (ordenados) y sus series (ordenadas).
-const fullWorkoutInclude = {
+export const fullWorkoutInclude = {
   exercises: {
     orderBy: { order: 'asc' },
     include: {
