@@ -37,6 +37,8 @@ export type WorkoutSummary = Prisma.WorkoutGetPayload<{
 export type PersonalRecord = {
   exerciseId: string;
   exerciseName: string;
+  // 'weight' para ejercicios con carga; 'reps' para peso corporal (mejor cantidad de reps)
+  metric: 'weight' | 'reps';
   weight: number;
   reps: number;
   workoutId: string;
@@ -74,13 +76,16 @@ export class WorkoutsService {
     });
   }
 
-  /** Récords: mejor peso por ejercicio (solo series de trabajo completadas). */
+  /**
+   * Récords por ejercicio (series de trabajo completadas). Si el ejercicio se hizo
+   * con carga, el récord es el mejor peso; si es a puro peso corporal, la mejor
+   * cantidad de reps.
+   */
   async personalRecords(userId: string): Promise<PersonalRecord[]> {
     const sets = await this.prisma.workoutSet.findMany({
       where: {
         completed: true,
         type: 'NORMAL',
-        weight: { gt: 0 },
         workoutExercise: {
           workout: { userId, finishedAt: { not: null } },
         },
@@ -98,29 +103,59 @@ export class WorkoutsService {
       },
     });
 
-    const best = new Map<string, PersonalRecord>();
+    type Row = {
+      weight: number;
+      reps: number;
+      exerciseId: string;
+      name: string;
+      workoutId: string;
+      finishedAt: Date | null;
+    };
+    const groups = new Map<string, Row[]>();
     for (const s of sets) {
       const we = s.workoutExercise;
-      const current = best.get(we.exerciseId);
-      const better =
-        !current ||
-        s.weight > current.weight ||
-        (s.weight === current.weight && s.reps > current.reps);
-      if (better) {
-        best.set(we.exerciseId, {
-          exerciseId: we.exerciseId,
-          exerciseName: we.exercise.name,
-          weight: s.weight,
-          reps: s.reps,
-          workoutId: we.workout.id,
-          achievedAt: we.workout.finishedAt,
-        });
-      }
+      const row: Row = {
+        weight: s.weight,
+        reps: s.reps,
+        exerciseId: we.exerciseId,
+        name: we.exercise.name,
+        workoutId: we.workout.id,
+        finishedAt: we.workout.finishedAt,
+      };
+      const list = groups.get(row.exerciseId);
+      if (list) list.push(row);
+      else groups.set(row.exerciseId, [row]);
     }
 
-    return [...best.values()].sort((a, b) =>
-      a.exerciseName.localeCompare(b.exerciseName, 'es'),
-    );
+    const records: PersonalRecord[] = [];
+    for (const [exerciseId, list] of groups) {
+      const hasWeight = list.some((r) => r.weight > 0);
+      let best: Row;
+      let metric: 'weight' | 'reps';
+      if (hasWeight) {
+        metric = 'weight';
+        best = list
+          .filter((r) => r.weight > 0)
+          .reduce((a, b) =>
+            b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps) ? b : a,
+          );
+      } else {
+        metric = 'reps';
+        best = list.reduce((a, b) => (b.reps > a.reps ? b : a));
+        if (best.reps <= 0) continue; // sin reps útiles → sin récord
+      }
+      records.push({
+        exerciseId,
+        exerciseName: best.name,
+        metric,
+        weight: best.weight,
+        reps: best.reps,
+        workoutId: best.workoutId,
+        achievedAt: best.finishedAt,
+      });
+    }
+
+    return records.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'es'));
   }
 
   async active(userId: string): Promise<FullWorkout | null> {
