@@ -1,0 +1,102 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
+import { WorkoutsService } from './workouts.service';
+import { AddExerciseDto } from './dto/add-exercise.dto';
+import { AddSetDto } from './dto/add-set.dto';
+import { UpdateSetDto } from './dto/update-set.dto';
+
+@UseGuards(JwtAuthGuard)
+@Controller('workouts')
+export class WorkoutsController {
+  constructor(private readonly workouts: WorkoutsService) {}
+
+  @Post()
+  create(@CurrentUser() user: AuthUser) {
+    return this.workouts.create(user.id);
+  }
+
+  @Get()
+  list(@CurrentUser() user: AuthUser) {
+    return this.workouts.list(user.id);
+  }
+
+  // OJO: 'active' debe ir antes que ':id'
+  @Get('active')
+  active(@CurrentUser() user: AuthUser) {
+    return this.workouts.active(user.id);
+  }
+
+  @Get(':id')
+  getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.workouts.getOne(user.id, id);
+  }
+
+  @Patch(':id/finish')
+  finish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.workouts.finish(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.workouts.remove(user.id, id);
+  }
+
+  @Post(':id/exercises')
+  addExercise(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: AddExerciseDto,
+  ) {
+    return this.workouts.addExercise(user.id, id, dto);
+  }
+
+  @Delete(':id/exercises/:workoutExerciseId')
+  removeExercise(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+  ) {
+    return this.workouts.removeExercise(user.id, id, workoutExerciseId);
+  }
+
+  @Post(':id/exercises/:workoutExerciseId/sets')
+  addSet(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+    @Body() dto: AddSetDto,
+  ) {
+    return this.workouts.addSet(user.id, id, workoutExerciseId, dto);
+  }
+
+  @Patch(':id/sets/:setId')
+  updateSet(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('setId') setId: string,
+    @Body() dto: UpdateSetDto,
+  ) {
+    return this.workouts.updateSet(user.id, id, setId, dto);
+  }
+
+  @Delete(':id/sets/:setId')
+  removeSet(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('setId') setId: string,
+  ) {
+    return this.workouts.removeSet(user.id, id, setId);
+  }
+}

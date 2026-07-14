@@ -67,7 +67,7 @@ en el VPS.
 
 1. **Scaffolding** ✅
 2. **Auth JWT con cookies httpOnly** ✅
-3. API de entrenos
+3. **API de entrenos** ✅
 4. Pantalla de entreno en vivo
 5. Rutinas / plantillas
 6. Historial + PRs
