@@ -1,4 +1,4 @@
-import { apiFetch, extractError, type Exercise } from './api-client';
+import { apiFetch, extractError } from './api-client';
 
 export type SessionUser = { id: string; email: string; name: string };
 
@@ -42,10 +42,4 @@ export async function getMe(): Promise<SessionUser | null> {
   if (!res.ok) return null;
   const data = await parse(res);
   return (data as { user: SessionUser }).user;
-}
-
-export async function getExercises(): Promise<Exercise[]> {
-  const res = await apiFetch('/api/exercises');
-  if (!res.ok) return [];
-  return (await parse(res)) as Exercise[];
 }
