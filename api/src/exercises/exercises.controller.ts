@@ -27,7 +27,7 @@ export class ExercisesController {
   // Librería del usuario (ejercicios de la app + propios)
   @Get()
   findAll(@CurrentUser() user: AuthUser): Promise<ExerciseWithMeta[]> {
-    return this.exercisesService.findAll(user.id);
+    return this.exercisesService.findAll(user.id, user.isAdmin);
   }
 
   @Post()
@@ -35,7 +35,7 @@ export class ExercisesController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateExerciseDto,
   ): Promise<ExerciseWithMeta> {
-    return this.exercisesService.create(user.id, dto);
+    return this.exercisesService.create(user.id, user.isAdmin, dto);
   }
 
   @Patch(':id')
@@ -44,13 +44,13 @@ export class ExercisesController {
     @Param('id') id: string,
     @Body() dto: CreateExerciseDto,
   ): Promise<ExerciseWithMeta> {
-    return this.exercisesService.update(user.id, id, dto);
+    return this.exercisesService.update(user.id, user.isAdmin, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<void> {
-    return this.exercisesService.remove(user.id, id);
+    return this.exercisesService.remove(user.id, user.isAdmin, id);
   }
 
   // "Anterior" del usuario para este ejercicio

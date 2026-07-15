@@ -19,6 +19,7 @@ export type PublicUser = {
   email: string;
   name: string;
   weightUnit: WeightUnit;
+  isAdmin: boolean;
 };
 export type AuthResult = { user: PublicUser } & IssuedTokens;
 
@@ -53,12 +54,20 @@ export class AuthService {
     return createHash('sha256').update(value).digest('hex');
   }
 
+  private get adminEmails(): string[] {
+    return (this.config.get<string>('ADMIN_EMAILS') ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
   private toPublic(u: User): PublicUser {
     return {
       id: u.id,
       email: u.email,
       name: u.name,
       weightUnit: u.weightUnit,
+      isAdmin: u.isAdmin,
     };
   }
 
@@ -84,6 +93,7 @@ export class AuthService {
       email,
       passwordHash,
       name: dto.name.trim(),
+      isAdmin: this.adminEmails.includes(email),
     });
     return { user: this.toPublic(user), ...(await this.issueTokens(user)) };
   }
@@ -98,7 +108,16 @@ export class AuthService {
     if (!user || !ok) {
       throw new UnauthorizedException('Email o contraseña incorrectos.');
     }
-    return { user: this.toPublic(user), ...(await this.issueTokens(user)) };
+    // sincroniza el rol admin con ADMIN_EMAILS en cada login
+    const shouldBeAdmin = this.adminEmails.includes(email);
+    const authed =
+      user.isAdmin === shouldBeAdmin
+        ? user
+        : await this.prisma.user.update({
+            where: { id: user.id },
+            data: { isAdmin: shouldBeAdmin },
+          });
+    return { user: this.toPublic(authed), ...(await this.issueTokens(authed)) };
   }
 
   async refresh(rawRefresh: string | undefined): Promise<AuthResult> {
@@ -171,7 +190,7 @@ export class AuthService {
     const refreshTtl = this.refreshTtl;
 
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, isAdmin: user.isAdmin },
       { secret: this.accessSecret, expiresIn: accessTtl },
     );
 

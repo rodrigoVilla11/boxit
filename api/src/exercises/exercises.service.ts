@@ -34,21 +34,28 @@ export type ExerciseHistoryPoint = {
 export class ExercisesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private withMeta(e: Exercise, userId: string): ExerciseWithMeta {
-    return { ...e, editable: e.userId === userId };
+  private withMeta(
+    e: Exercise,
+    userId: string,
+    isAdmin: boolean,
+  ): ExerciseWithMeta {
+    // editable: los propios; el admin además puede editar los globales (de la app)
+    const editable = e.userId === userId || (isAdmin && e.userId === null);
+    return { ...e, editable };
   }
 
   /** Librería del usuario: ejercicios de la app (userId null) + los propios. */
-  async findAll(userId: string): Promise<ExerciseWithMeta[]> {
+  async findAll(userId: string, isAdmin: boolean): Promise<ExerciseWithMeta[]> {
     const rows = await this.prisma.exercise.findMany({
       where: { OR: [{ userId: null }, { userId }] },
       orderBy: { name: 'asc' },
     });
-    return rows.map((e) => this.withMeta(e, userId));
+    return rows.map((e) => this.withMeta(e, userId, isAdmin));
   }
 
   async create(
     userId: string,
+    isAdmin: boolean,
     dto: CreateExerciseDto,
   ): Promise<ExerciseWithMeta> {
     const name = dto.name.trim();
@@ -56,6 +63,8 @@ export class ExercisesService {
     if (existing) {
       throw new ConflictException('Ya existe un ejercicio con ese nombre.');
     }
+    // solo un admin puede crear ejercicios globales (para todos)
+    const ownerId = dto.global && isAdmin ? null : userId;
     const created = await this.prisma.exercise.create({
       data: {
         name,
@@ -64,18 +73,19 @@ export class ExercisesService {
         equipment: dto.equipment,
         description: dto.description?.trim() || null,
         videoUrl: dto.videoUrl?.trim() || null,
-        userId,
+        userId: ownerId,
       },
     });
-    return this.withMeta(created, userId);
+    return this.withMeta(created, userId, isAdmin);
   }
 
   async update(
     userId: string,
+    isAdmin: boolean,
     id: string,
     dto: CreateExerciseDto,
   ): Promise<ExerciseWithMeta> {
-    const ex = await this.assertOwn(userId, id);
+    const ex = await this.assertManage(userId, isAdmin, id);
     const name = dto.name.trim();
     if (name !== ex.name) {
       const dup = await this.prisma.exercise.findUnique({ where: { name } });
@@ -92,11 +102,11 @@ export class ExercisesService {
         videoUrl: dto.videoUrl?.trim() || null,
       },
     });
-    return this.withMeta(updated, userId);
+    return this.withMeta(updated, userId, isAdmin);
   }
 
-  async remove(userId: string, id: string): Promise<void> {
-    await this.assertOwn(userId, id);
+  async remove(userId: string, isAdmin: boolean, id: string): Promise<void> {
+    await this.assertManage(userId, isAdmin, id);
     try {
       await this.prisma.exercise.delete({ where: { id } });
     } catch (e) {
@@ -112,10 +122,16 @@ export class ExercisesService {
     }
   }
 
-  private async assertOwn(userId: string, id: string): Promise<Exercise> {
+  private async assertManage(
+    userId: string,
+    isAdmin: boolean,
+    id: string,
+  ): Promise<Exercise> {
     const ex = await this.prisma.exercise.findUnique({ where: { id } });
-    // solo los ejercicios custom del propio usuario son editables
-    if (!ex || ex.userId !== userId) {
+    // gestionable: los propios; el admin además puede los globales (de la app)
+    const canManage =
+      !!ex && (ex.userId === userId || (isAdmin && ex.userId === null));
+    if (!ex || !canManage) {
       throw new NotFoundException('Ejercicio no encontrado.');
     }
     return ex;

@@ -12,6 +12,7 @@ import { ACCESS_COOKIE } from '../auth.cookies';
 interface AccessPayload {
   sub: string;
   email: string;
+  isAdmin?: boolean;
 }
 
 @Injectable()
@@ -31,7 +32,11 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwt.verifyAsync<AccessPayload>(token, {
         secret: this.config.getOrThrow<string>('JWT_SECRET'),
       });
-      req.user = { id: payload.sub, email: payload.email };
+      req.user = {
+        id: payload.sub,
+        email: payload.email,
+        isAdmin: payload.isAdmin ?? false,
+      };
       return true;
     } catch {
       throw new UnauthorizedException('Sesión inválida o expirada');

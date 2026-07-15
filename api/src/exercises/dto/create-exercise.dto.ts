@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
@@ -34,4 +35,9 @@ export class CreateExerciseDto {
   @IsOptional()
   @IsUrl({}, { message: 'El video tiene que ser una URL válida.' })
   videoUrl?: string;
+
+  // Solo lo respeta el back si el usuario es admin (crea un ejercicio global)
+  @IsOptional()
+  @IsBoolean()
+  global?: boolean;
 }

@@ -18,6 +18,7 @@ export class UsersService {
     email: string;
     passwordHash: string;
     name: string;
+    isAdmin?: boolean;
   }): Promise<User> {
     return this.prisma.user.create({ data });
   }
