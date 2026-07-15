@@ -18,14 +18,14 @@ export function MuscleMap() {
       .catch(() => setStats([]));
   }, []);
 
-  const setsByMuscle = useMemo(() => {
+  const scoreByMuscle = useMemo(() => {
     const m = new Map<MuscleKey, number>();
-    (stats ?? []).forEach((s) => m.set(s.muscle, s.sets));
+    (stats ?? []).forEach((s) => m.set(s.muscle, s.score));
     return m;
   }, [stats]);
 
-  const maxSets = useMemo(
-    () => (stats ?? []).reduce((max, s) => Math.max(max, s.sets), 0),
+  const maxScore = useMemo(
+    () => (stats ?? []).reduce((max, s) => Math.max(max, s.score), 0),
     [stats],
   );
 
@@ -35,7 +35,7 @@ export function MuscleMap() {
   );
 
   const colorFor = (muscle: MuscleKey) =>
-    muscleColor(setsByMuscle.get(muscle) ?? 0, maxSets);
+    muscleColor(scoreByMuscle.get(muscle) ?? 0, maxScore);
 
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-card">
@@ -48,7 +48,7 @@ export function MuscleMap() {
         <div className="flex justify-center py-10 text-textMuted">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
-      ) : maxSets === 0 ? (
+      ) : maxScore === 0 ? (
         <p className="py-8 text-center text-sm text-textMuted">
           Todavía no hay datos. Terminá un entreno para ver qué músculos trabajaste.
         </p>

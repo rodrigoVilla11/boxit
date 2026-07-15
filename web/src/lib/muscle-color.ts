@@ -24,8 +24,15 @@ function ramp(t: number): string {
   return `rgb(${r}, ${g}, ${bl})`;
 }
 
-/** Color de un músculo según sus series relativas al máximo. */
-export function muscleColor(sets: number, maxSets: number): string {
-  if (sets <= 0) return MUSCLE_BASE;
-  return ramp(maxSets > 0 ? sets / maxSets : 0);
+/** Color de un músculo según su intensidad relativa al máximo. */
+export function muscleColor(score: number, maxScore: number): string {
+  if (score <= 0) return MUSCLE_BASE;
+  return ramp(maxScore > 0 ? score / maxScore : 0);
+}
+
+/** Color para resaltar un músculo en un ejercicio: primario fuerte, secundario tenue. */
+export function highlightColor(role: 'primary' | 'secondary' | 'none'): string {
+  if (role === 'primary') return '#22C55E';
+  if (role === 'secondary') return 'rgba(34, 197, 94, 0.4)';
+  return MUSCLE_BASE;
 }

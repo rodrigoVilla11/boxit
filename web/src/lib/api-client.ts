@@ -7,6 +7,7 @@ export type Exercise = {
   id: string;
   name: string;
   primaryMuscle: string;
+  secondaryMuscles: string[];
   equipment: string;
   createdAt: string;
 };

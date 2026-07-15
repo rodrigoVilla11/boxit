@@ -13,7 +13,7 @@ export type MuscleKey =
   | 'CORE'
   | 'FOREARMS';
 
-export type MuscleStat = { muscle: MuscleKey; sets: number; volume: number };
+export type MuscleStat = { muscle: MuscleKey; sets: number; score: number };
 
 export type ExerciseHistoryPoint = {
   workoutId: string;

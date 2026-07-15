@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dumbbell, Loader2, Search, X } from 'lucide-react';
+import { Dumbbell, Info, Loader2, Search, X } from 'lucide-react';
 import { getExercises, type Exercise } from '@/lib/workouts';
 import { equipmentLabel, muscleLabel } from '@/lib/labels';
+import { ExerciseDetail } from '@/components/progress/exercise-detail';
 
 const normalize = (s: string): string =>
   s
@@ -25,6 +26,7 @@ export function ExercisePicker({
   const [items, setItems] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Exercise | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -100,12 +102,12 @@ export function ExercisePicker({
         ) : (
           <ul className="space-y-1.5 pb-6">
             {filtered.map((e) => (
-              <li key={e.id}>
+              <li key={e.id} className="flex items-center gap-1 rounded-2xl bg-surface pr-1">
                 <button
                   type="button"
                   onClick={() => pick(e)}
                   disabled={adding !== null}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99] disabled:opacity-60"
+                  className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left transition active:scale-[0.99] disabled:opacity-60"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-accentLime">
                     {adding === e.id ? (
@@ -123,11 +125,21 @@ export function ExercisePicker({
                     </span>
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setDetail(e)}
+                  aria-label="Ver músculos"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-textMuted transition hover:text-primary"
+                >
+                  <Info className="h-5 w-5" />
+                </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <ExerciseDetail exercise={detail} onClose={() => setDetail(null)} />
     </div>
   );
 }
