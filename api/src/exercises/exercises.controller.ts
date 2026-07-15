@@ -1,26 +1,60 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { Exercise } from '@prisma/client';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import {
   ExerciseHistoryPoint,
   ExercisesService,
+  ExerciseWithMeta,
   PreviousSession,
 } from './exercises.service';
+import { CreateExerciseDto } from './dto/create-exercise.dto';
 
+@UseGuards(JwtAuthGuard)
 @Controller('exercises')
 export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) {}
 
-  // Librería pública
+  // Librería del usuario (ejercicios de la app + propios)
   @Get()
-  findAll(): Promise<Exercise[]> {
-    return this.exercisesService.findAll();
+  findAll(@CurrentUser() user: AuthUser): Promise<ExerciseWithMeta[]> {
+    return this.exercisesService.findAll(user.id);
   }
 
-  // "Anterior" del usuario para este ejercicio (requiere sesión)
+  @Post()
+  create(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateExerciseDto,
+  ): Promise<ExerciseWithMeta> {
+    return this.exercisesService.create(user.id, dto);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateExerciseDto,
+  ): Promise<ExerciseWithMeta> {
+    return this.exercisesService.update(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string): Promise<void> {
+    return this.exercisesService.remove(user.id, id);
+  }
+
+  // "Anterior" del usuario para este ejercicio
   @Get(':id/previous')
-  @UseGuards(JwtAuthGuard)
   previous(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
@@ -28,9 +62,8 @@ export class ExercisesController {
     return this.exercisesService.previousSession(user.id, id);
   }
 
-  // Progresión del ejercicio en el tiempo (requiere sesión)
+  // Progresión del ejercicio en el tiempo
   @Get(':id/history')
-  @UseGuards(JwtAuthGuard)
   history(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,

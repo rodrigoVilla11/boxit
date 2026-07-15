@@ -1,6 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { Exercise, SetType } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Exercise, Prisma, SetType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateExerciseDto } from './dto/create-exercise.dto';
+
+export type ExerciseWithMeta = Exercise & { editable: boolean };
 
 export type PreviousSet = {
   order: number;
@@ -19,7 +26,7 @@ export type ExerciseHistoryPoint = {
   workoutId: string;
   date: Date | null;
   metric: 'weight' | 'reps';
-  value: number; // mejor peso (kg) o mejor cantidad de reps
+  value: number;
   reps: number;
 };
 
@@ -27,11 +34,91 @@ export type ExerciseHistoryPoint = {
 export class ExercisesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Devuelve la librería completa de ejercicios, ordenada por nombre. */
-  findAll(): Promise<Exercise[]> {
-    return this.prisma.exercise.findMany({
+  private withMeta(e: Exercise, userId: string): ExerciseWithMeta {
+    return { ...e, editable: e.userId === userId };
+  }
+
+  /** Librería del usuario: ejercicios de la app (userId null) + los propios. */
+  async findAll(userId: string): Promise<ExerciseWithMeta[]> {
+    const rows = await this.prisma.exercise.findMany({
+      where: { OR: [{ userId: null }, { userId }] },
       orderBy: { name: 'asc' },
     });
+    return rows.map((e) => this.withMeta(e, userId));
+  }
+
+  async create(
+    userId: string,
+    dto: CreateExerciseDto,
+  ): Promise<ExerciseWithMeta> {
+    const name = dto.name.trim();
+    const existing = await this.prisma.exercise.findUnique({ where: { name } });
+    if (existing) {
+      throw new ConflictException('Ya existe un ejercicio con ese nombre.');
+    }
+    const created = await this.prisma.exercise.create({
+      data: {
+        name,
+        primaryMuscle: dto.primaryMuscle,
+        secondaryMuscles: dto.secondaryMuscles ?? [],
+        equipment: dto.equipment,
+        description: dto.description?.trim() || null,
+        videoUrl: dto.videoUrl?.trim() || null,
+        userId,
+      },
+    });
+    return this.withMeta(created, userId);
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    dto: CreateExerciseDto,
+  ): Promise<ExerciseWithMeta> {
+    const ex = await this.assertOwn(userId, id);
+    const name = dto.name.trim();
+    if (name !== ex.name) {
+      const dup = await this.prisma.exercise.findUnique({ where: { name } });
+      if (dup) throw new ConflictException('Ya existe un ejercicio con ese nombre.');
+    }
+    const updated = await this.prisma.exercise.update({
+      where: { id },
+      data: {
+        name,
+        primaryMuscle: dto.primaryMuscle,
+        secondaryMuscles: dto.secondaryMuscles ?? [],
+        equipment: dto.equipment,
+        description: dto.description?.trim() || null,
+        videoUrl: dto.videoUrl?.trim() || null,
+      },
+    });
+    return this.withMeta(updated, userId);
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    await this.assertOwn(userId, id);
+    try {
+      await this.prisma.exercise.delete({ where: { id } });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'El ejercicio está en uso en entrenos o rutinas.',
+        );
+      }
+      throw e;
+    }
+  }
+
+  private async assertOwn(userId: string, id: string): Promise<Exercise> {
+    const ex = await this.prisma.exercise.findUnique({ where: { id } });
+    // solo los ejercicios custom del propio usuario son editables
+    if (!ex || ex.userId !== userId) {
+      throw new NotFoundException('Ejercicio no encontrado.');
+    }
+    return ex;
   }
 
   /**

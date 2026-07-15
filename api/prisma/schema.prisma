@@ -58,6 +58,7 @@ model User {
   workouts      Workout[]
   routines      Routine[]
   refreshTokens RefreshToken[]
+  exercises     Exercise[]
 }
 
 model RefreshToken {
@@ -81,10 +82,16 @@ model Exercise {
   primaryMuscle    Muscle
   secondaryMuscles Muscle[]  @default([])
   equipment        Equipment
+  description      String?
+  videoUrl         String?
+  userId           String? // null = ejercicio de la app; seteado = custom del usuario
   createdAt        DateTime  @default(now())
 
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
   routineExercises RoutineExercise[]
   workoutExercises WorkoutExercise[]
+
+  @@index([userId])
 }
 
 // ------------------------ Rutinas / Plantillas -------------------
