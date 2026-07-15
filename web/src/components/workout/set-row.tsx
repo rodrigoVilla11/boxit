@@ -36,11 +36,13 @@ export function SetRow({
   const [weight, setWeight] = useState(() => weightInputValue(set.weight, unit));
   const [reps, setReps] = useState(set.reps ? String(set.reps) : '');
 
-  // Reconvierte el input al cambiar de unidad (kg <-> lb)
+  // Sincroniza los inputs con el server: al cambiar de unidad, y cuando el valor
+  // guardado cambia (eco de un guardado ok o rollback tras un error).
   useEffect(() => {
     setWeight(weightInputValue(set.weight, unit));
+    setReps(set.reps ? String(set.reps) : '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unit]);
+  }, [unit, set.weight, set.reps]);
 
   const isWarmup = set.type === 'WARMUP';
 

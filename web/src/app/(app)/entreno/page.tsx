@@ -27,16 +27,18 @@ export default function EntrenoPage() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   async function onSaveSet(setId: string, patch: SetPatch) {
-    await wo.saveSet(setId, patch);
-    if (patch.completed === true) rest.start();
+    const ok = await wo.saveSet(setId, patch);
+    if (ok && patch.completed === true) rest.start();
   }
 
   async function onFinish() {
     setFinishing(true);
     try {
       const done = await wo.finish();
-      rest.skip();
-      setSummary(done);
+      if (done) {
+        rest.skip();
+        setSummary(done);
+      }
     } finally {
       setFinishing(false);
     }

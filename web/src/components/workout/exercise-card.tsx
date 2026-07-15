@@ -26,6 +26,18 @@ export function ExerciseCard({
   onRemoveExercise: (workoutExerciseId: string) => void;
 }) {
   const { unit } = useUnit();
+
+  // "Anterior" se alinea por serie de TRABAJO (NORMAL), no por índice de fila:
+  // la n-ésima serie normal actual se compara con la n-ésima de la sesión previa;
+  // los warmups no muestran anterior.
+  const prevWorking = (previous?.sets ?? []).filter((s) => s.type === 'NORMAL');
+  let workingCount = -1;
+  const previousForRow = we.sets.map((set) => {
+    if (set.type !== 'NORMAL') return undefined;
+    workingCount += 1;
+    return prevWorking[workingCount];
+  });
+
   return (
     <section className="rounded-2xl bg-surface p-3 shadow-card">
       <header className="flex items-start justify-between px-1 pb-2">
@@ -67,7 +79,7 @@ export function ExerciseCard({
             key={set.id}
             index={i}
             set={set}
-            previous={previous?.sets[i]}
+            previous={previousForRow[i]}
             onSave={onSaveSet}
             onRemove={onRemoveSet}
             onToggleWarmup={onToggleWarmup}

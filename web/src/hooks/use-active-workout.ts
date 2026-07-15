@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useToast } from '@/components/toast-provider';
 import * as api from '@/lib/workouts';
 import type { PreviousSession, SetPatch, Workout, WorkoutSet } from '@/lib/workouts';
+
+function friendlyError(e: unknown, fallback: string): string {
+  const msg = e instanceof Error ? e.message : fallback;
+  return /failed to fetch|networkerror|network request failed/i.test(msg)
+    ? 'Sin conexión. Revisá tu internet.'
+    : msg;
+}
 
 function replaceSet(workout: Workout, updated: WorkoutSet): Workout {
   return {
@@ -21,16 +29,18 @@ export type UseActiveWorkout = {
   starting: boolean;
   error: string | null;
   start: () => Promise<void>;
-  addExercise: (exerciseId: string) => Promise<void>;
-  removeExercise: (workoutExerciseId: string) => Promise<void>;
-  addSet: (workoutExerciseId: string) => Promise<void>;
-  removeSet: (setId: string) => Promise<void>;
-  saveSet: (setId: string, patch: SetPatch) => Promise<void>;
+  // las mutaciones devuelven true si se guardó ok (ante error: toast + resync)
+  addExercise: (exerciseId: string) => Promise<boolean>;
+  removeExercise: (workoutExerciseId: string) => Promise<boolean>;
+  addSet: (workoutExerciseId: string) => Promise<boolean>;
+  removeSet: (setId: string) => Promise<boolean>;
+  saveSet: (setId: string, patch: SetPatch) => Promise<boolean>;
   finish: () => Promise<Workout | null>;
   discard: () => Promise<void>;
 };
 
 export function useActiveWorkout(): UseActiveWorkout {
+  const toast = useToast();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [previous, setPrevious] = useState<Record<string, PreviousSession>>({});
   const [loading, setLoading] = useState(true);
@@ -78,51 +88,86 @@ export function useActiveWorkout(): UseActiveWorkout {
     return workout.id;
   };
 
+  // Re-sincroniza el entreno con el server (rollback ante error de mutación)
+  const resync = async () => {
+    try {
+      setWorkout(await api.getActiveWorkout());
+    } catch {
+      /* sin conexión: dejamos el estado como está */
+    }
+  };
+
+  const run = async (fn: () => Promise<void>): Promise<boolean> => {
+    try {
+      await fn();
+      return true;
+    } catch (e) {
+      toast.error(friendlyError(e, 'No se pudo guardar.'));
+      await resync();
+      return false;
+    }
+  };
+
   const start = async () => {
     setStarting(true);
     setError(null);
     try {
       setWorkout(await api.createWorkout());
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
+      const msg = friendlyError(e, 'No se pudo empezar el entreno.');
+      setError(msg);
+      toast.error(msg);
     } finally {
       setStarting(false);
     }
   };
 
-  const addExercise = async (exerciseId: string) => {
-    setWorkout(await api.addExercise(guardedId(), exerciseId));
-  };
+  const addExercise = (exerciseId: string) =>
+    run(async () => {
+      setWorkout(await api.addExercise(guardedId(), exerciseId));
+    });
 
-  const removeExercise = async (workoutExerciseId: string) => {
-    setWorkout(await api.removeExercise(guardedId(), workoutExerciseId));
-  };
+  const removeExercise = (workoutExerciseId: string) =>
+    run(async () => {
+      setWorkout(await api.removeExercise(guardedId(), workoutExerciseId));
+    });
 
-  const addSet = async (workoutExerciseId: string) => {
-    setWorkout(await api.addSet(guardedId(), workoutExerciseId));
-  };
+  const addSet = (workoutExerciseId: string) =>
+    run(async () => {
+      setWorkout(await api.addSet(guardedId(), workoutExerciseId));
+    });
 
-  const removeSet = async (setId: string) => {
-    setWorkout(await api.removeSet(guardedId(), setId));
-  };
+  const removeSet = (setId: string) =>
+    run(async () => {
+      setWorkout(await api.removeSet(guardedId(), setId));
+    });
 
-  const saveSet = async (setId: string, patch: SetPatch) => {
-    const updated = await api.updateSet(guardedId(), setId, patch);
-    setWorkout((w) => (w ? replaceSet(w, updated) : w));
-  };
+  const saveSet = (setId: string, patch: SetPatch) =>
+    run(async () => {
+      const updated = await api.updateSet(guardedId(), setId, patch);
+      setWorkout((w) => (w ? replaceSet(w, updated) : w));
+    });
 
   const finish = async (): Promise<Workout | null> => {
-    const id = guardedId();
-    const done = await api.finishWorkout(id);
-    setWorkout(null);
-    setPrevious({});
-    return done;
+    try {
+      const done = await api.finishWorkout(guardedId());
+      setWorkout(null);
+      setPrevious({});
+      return done;
+    } catch (e) {
+      toast.error(friendlyError(e, 'No se pudo terminar el entreno.'));
+      return null;
+    }
   };
 
   const discard = async () => {
-    await api.discardWorkout(guardedId());
-    setWorkout(null);
-    setPrevious({});
+    try {
+      await api.discardWorkout(guardedId());
+      setWorkout(null);
+      setPrevious({});
+    } catch (e) {
+      toast.error(friendlyError(e, 'No se pudo descartar.'));
+    }
   };
 
   return {
