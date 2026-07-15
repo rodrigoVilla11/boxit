@@ -315,6 +315,8 @@ export class WorkoutsService {
     if (dto.weight !== undefined) data.weight = dto.weight;
     if (dto.reps !== undefined) data.reps = dto.reps;
     if (dto.type !== undefined) data.type = dto.type;
+    if (dto.rpe !== undefined) data.rpe = dto.rpe;
+    if (dto.note !== undefined) data.note = dto.note?.trim() || null;
     if (dto.completed !== undefined) {
       data.completed = dto.completed;
       data.completedAt = dto.completed ? new Date() : null;
@@ -333,7 +335,96 @@ export class WorkoutsService {
     return this.findFull(workoutId);
   }
 
+  /**
+   * Reordena los ejercicios del entreno según `ids` (lista completa y ordenada).
+   * Renumera en dos fases dentro de una transacción para no violar el unique
+   * `[workoutId, order]`: primero a órdenes negativos temporales, luego a 1..n.
+   */
+  async reorderExercises(
+    userId: string,
+    workoutId: string,
+    ids: string[],
+  ): Promise<FullWorkout> {
+    await this.assertActive(userId, workoutId);
+    const existing = await this.prisma.workoutExercise.findMany({
+      where: { workoutId },
+      select: { id: true },
+    });
+    this.assertSameIdSet(
+      existing.map((e) => e.id),
+      ids,
+      'Ejercicio del entreno no encontrado.',
+    );
+    await this.prisma.$transaction([
+      ...ids.map((id, i) =>
+        this.prisma.workoutExercise.update({
+          where: { id },
+          data: { order: -(i + 1) },
+        }),
+      ),
+      ...ids.map((id, i) =>
+        this.prisma.workoutExercise.update({
+          where: { id },
+          data: { order: i + 1 },
+        }),
+      ),
+    ]);
+    return this.findFull(workoutId);
+  }
+
+  /** Reordena las series de un ejercicio del entreno (misma técnica 2 fases). */
+  async reorderSets(
+    userId: string,
+    workoutId: string,
+    workoutExerciseId: string,
+    ids: string[],
+  ): Promise<FullWorkout> {
+    await this.assertActive(userId, workoutId);
+    await this.assertWorkoutExercise(workoutId, workoutExerciseId);
+    const existing = await this.prisma.workoutSet.findMany({
+      where: { workoutExerciseId },
+      select: { id: true },
+    });
+    this.assertSameIdSet(
+      existing.map((s) => s.id),
+      ids,
+      'Serie no encontrada.',
+    );
+    await this.prisma.$transaction([
+      ...ids.map((id, i) =>
+        this.prisma.workoutSet.update({
+          where: { id },
+          data: { order: -(i + 1) },
+        }),
+      ),
+      ...ids.map((id, i) =>
+        this.prisma.workoutSet.update({
+          where: { id },
+          data: { order: i + 1 },
+        }),
+      ),
+    ]);
+    return this.findFull(workoutId);
+  }
+
   // ---- helpers de ownership / integridad ----
+
+  /** Exige que `ids` sea exactamente el mismo conjunto que `existing` (sin duplicados). */
+  private assertSameIdSet(
+    existing: string[],
+    ids: string[],
+    message: string,
+  ): void {
+    const unique = new Set(ids);
+    const owned = new Set(existing);
+    if (
+      unique.size !== ids.length ||
+      ids.length !== existing.length ||
+      ids.some((id) => !owned.has(id))
+    ) {
+      throw new BadRequestException(message);
+    }
+  }
 
   private async assertOwner(userId: string, id: string): Promise<Workout> {
     const workout = await this.prisma.workout.findUnique({ where: { id } });

@@ -17,6 +17,7 @@ import { WorkoutsService } from './workouts.service';
 import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
+import { ReorderDto } from './dto/reorder.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workouts')
@@ -75,6 +76,25 @@ export class WorkoutsController {
     @Body() dto: AddExerciseDto,
   ) {
     return this.workouts.addExercise(user.id, id, dto);
+  }
+
+  @Patch(':id/exercises/reorder')
+  reorderExercises(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ReorderDto,
+  ) {
+    return this.workouts.reorderExercises(user.id, id, dto.ids);
+  }
+
+  @Patch(':id/exercises/:workoutExerciseId/sets/reorder')
+  reorderSets(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+    @Body() dto: ReorderDto,
+  ) {
+    return this.workouts.reorderSets(user.id, id, workoutExerciseId, dto.ids);
   }
 
   @Delete(':id/exercises/:workoutExerciseId')

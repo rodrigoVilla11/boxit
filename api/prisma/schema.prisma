@@ -60,6 +60,7 @@ model User {
   routines      Routine[]
   refreshTokens RefreshToken[]
   exercises     Exercise[]
+  bodyweights   Bodyweight[]
 }
 
 model RefreshToken {
@@ -111,11 +112,15 @@ model Routine {
 }
 
 model RoutineExercise {
-  id         String @id @default(cuid())
-  routineId  String
-  exerciseId String
-  order      Int
-  targetSets Int    @default(3)
+  id           String @id @default(cuid())
+  routineId    String
+  exerciseId   String
+  order        Int
+  targetSets   Int    @default(3)
+  targetReps   Int? // objetivo de reps por serie (opcional)
+  targetWeight Float? // objetivo de peso por serie, en kg (opcional)
+  restSeconds  Int? // descanso sugerido entre series (opcional)
+  note         String? // nota del ejercicio en la rutina
 
   routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id])
@@ -164,8 +169,25 @@ model WorkoutSet {
   reps              Int       @default(0)
   completed         Boolean   @default(false)
   completedAt       DateTime?
+  rpe               Float? // esfuerzo percibido 0–10 (opcional)
+  note              String? // nota de la serie (opcional)
 
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
 
   @@unique([workoutExerciseId, order])
+}
+
+// -------------------------- Peso corporal ------------------------
+
+model Bodyweight {
+  id        String   @id @default(cuid())
+  userId    String
+  weightKg  Float // siempre en kg; la UI convierte
+  takenAt   DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
 }

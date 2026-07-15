@@ -8,6 +8,20 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { fullWorkoutInclude, FullWorkout } from '../workouts/workouts.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
+import { RoutineExerciseInput } from './dto/routine-exercise.input';
+
+/** Mapea los ejercicios del DTO a filas `RoutineExercise` (order = índice + 1). */
+function toRoutineExerciseRows(exercises: RoutineExerciseInput[]) {
+  return exercises.map((e, i) => ({
+    exerciseId: e.exerciseId,
+    order: i + 1,
+    targetSets: e.targetSets,
+    targetReps: e.targetReps ?? null,
+    targetWeight: e.targetWeight ?? null,
+    restSeconds: e.restSeconds ?? null,
+    note: e.note?.trim() || null,
+  }));
+}
 
 const fullRoutineInclude = {
   exercises: {
@@ -30,13 +44,7 @@ export class RoutinesService {
       data: {
         userId,
         name: dto.name.trim(),
-        exercises: {
-          create: dto.exercises.map((e, i) => ({
-            exerciseId: e.exerciseId,
-            order: i + 1,
-            targetSets: e.targetSets,
-          })),
-        },
+        exercises: { create: toRoutineExerciseRows(dto.exercises) },
       },
       include: fullRoutineInclude,
     });
@@ -75,11 +83,7 @@ export class RoutinesService {
         // reemplaza los ejercicios: borra los actuales y crea los nuevos
         exercises: {
           deleteMany: {},
-          create: dto.exercises.map((e, i) => ({
-            exerciseId: e.exerciseId,
-            order: i + 1,
-            targetSets: e.targetSets,
-          })),
+          create: toRoutineExerciseRows(dto.exercises),
         },
       },
       include: fullRoutineInclude,
@@ -111,12 +115,13 @@ export class RoutinesService {
           create: routine.exercises.map((re) => ({
             exerciseId: re.exerciseId,
             order: re.order,
+            // Prefila cada serie con los objetivos de la rutina (si los hay)
             sets: {
               create: Array.from({ length: re.targetSets }, (_, i) => ({
                 order: i + 1,
-                type: 'NORMAL',
-                weight: 0,
-                reps: 0,
+                type: 'NORMAL' as const,
+                weight: re.targetWeight ?? 0,
+                reps: re.targetReps ?? 0,
               })),
             },
           })),

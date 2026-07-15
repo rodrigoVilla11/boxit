@@ -1,4 +1,13 @@
-import { IsInt, IsString, Max, Min, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class RoutineExerciseInput {
   @IsString()
@@ -9,4 +18,28 @@ export class RoutineExerciseInput {
   @Min(1, { message: 'Mínimo 1 serie.' })
   @Max(20, { message: 'Máximo 20 series.' })
   targetSets!: number;
+
+  // Objetivos opcionales por serie (peso siempre en kg)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  targetReps?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(2000)
+  targetWeight?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3600)
+  restSeconds?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(280)
+  note?: string | null;
 }

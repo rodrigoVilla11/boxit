@@ -11,6 +11,8 @@ export type WorkoutSet = {
   reps: number;
   completed: boolean;
   completedAt: string | null;
+  rpe: number | null;
+  note: string | null;
 };
 
 export type WorkoutExercise = {
@@ -49,6 +51,8 @@ export type SetPatch = Partial<{
   reps: number;
   completed: boolean;
   type: SetType;
+  rpe: number | null;
+  note: string | null;
 }>;
 
 async function json<T>(res: Response, fallback: string): Promise<T> {
@@ -170,6 +174,31 @@ export async function removeSet(id: string, setId: string): Promise<Workout> {
     method: 'DELETE',
   });
   return json<Workout>(res, 'No pudimos quitar la serie.');
+}
+
+/** Reordena los ejercicios del entreno (ids = orden completo). */
+export async function reorderExercises(
+  id: string,
+  ids: string[],
+): Promise<Workout> {
+  const res = await apiFetch(`/api/workouts/${id}/exercises/reorder`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ids }),
+  });
+  return json<Workout>(res, 'No pudimos reordenar los ejercicios.');
+}
+
+/** Reordena las series de un ejercicio del entreno (ids = orden completo). */
+export async function reorderSets(
+  id: string,
+  workoutExerciseId: string,
+  ids: string[],
+): Promise<Workout> {
+  const res = await apiFetch(
+    `/api/workouts/${id}/exercises/${workoutExerciseId}/sets/reorder`,
+    { method: 'PATCH', body: JSON.stringify({ ids }) },
+  );
+  return json<Workout>(res, 'No pudimos reordenar las series.');
 }
 
 export async function getPrevious(exerciseId: string): Promise<PreviousSession> {

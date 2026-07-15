@@ -1,4 +1,14 @@
-import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { SetType } from '@prisma/client';
 
 export class UpdateSetDto {
@@ -19,4 +29,16 @@ export class UpdateSetDto {
   @IsOptional()
   @IsEnum(SetType)
   type?: SetType;
+
+  // esfuerzo percibido 0–10 (null para borrar)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  rpe?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(280)
+  note?: string | null;
 }

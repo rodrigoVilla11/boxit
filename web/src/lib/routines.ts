@@ -6,6 +6,10 @@ export type RoutineExercise = {
   order: number;
   exerciseId: string;
   targetSets: number;
+  targetReps: number | null;
+  targetWeight: number | null;
+  restSeconds: number | null;
+  note: string | null;
   exercise: Exercise;
 };
 
@@ -19,6 +23,10 @@ export type Routine = {
 export type RoutineExerciseInput = {
   exerciseId: string;
   targetSets: number;
+  targetReps?: number | null;
+  targetWeight?: number | null;
+  restSeconds?: number | null;
+  note?: string | null;
 };
 
 async function json<T>(res: Response, fallback: string): Promise<T> {
