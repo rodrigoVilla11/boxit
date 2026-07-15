@@ -5,8 +5,10 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -40,6 +42,14 @@ export class WorkoutsController {
   @Get('prs')
   prs(@CurrentUser() user: AuthUser) {
     return this.workouts.personalRecords(user.id);
+  }
+
+  @Get('muscle-map')
+  muscleMap(
+    @CurrentUser() user: AuthUser,
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
+  ) {
+    return this.workouts.muscleMap(user.id, days ?? 30);
   }
 
   @Get(':id')

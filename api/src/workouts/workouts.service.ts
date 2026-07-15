@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Workout, WorkoutSet } from '@prisma/client';
+import { Muscle, Prisma, Workout, WorkoutSet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
@@ -156,6 +156,49 @@ export class WorkoutsService {
     }
 
     return records.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'es'));
+  }
+
+  /**
+   * Mapa de músculos: series de trabajo y volumen por músculo primario en los
+   * últimos `days` días (entrenos terminados). Devuelve todos los músculos,
+   * con 0 si no se entrenaron, para que el front pinte el cuerpo completo.
+   */
+  async muscleMap(
+    userId: string,
+    days = 30,
+  ): Promise<{ muscle: Muscle; sets: number; volume: number }[]> {
+    const since = new Date(Date.now() - days * 86_400_000);
+    const sets = await this.prisma.workoutSet.findMany({
+      where: {
+        completed: true,
+        type: 'NORMAL',
+        workoutExercise: {
+          workout: { userId, finishedAt: { gte: since } },
+        },
+      },
+      select: {
+        weight: true,
+        reps: true,
+        workoutExercise: {
+          select: { exercise: { select: { primaryMuscle: true } } },
+        },
+      },
+    });
+
+    const acc = new Map<Muscle, { sets: number; volume: number }>();
+    for (const s of sets) {
+      const m = s.workoutExercise.exercise.primaryMuscle;
+      const cur = acc.get(m) ?? { sets: 0, volume: 0 };
+      cur.sets += 1;
+      cur.volume += s.weight * s.reps;
+      acc.set(m, cur);
+    }
+
+    return Object.values(Muscle).map((muscle) => ({
+      muscle,
+      sets: acc.get(muscle)?.sets ?? 0,
+      volume: acc.get(muscle)?.volume ?? 0,
+    }));
   }
 
   async active(userId: string): Promise<FullWorkout | null> {

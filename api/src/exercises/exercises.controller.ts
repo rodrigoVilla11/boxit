@@ -3,6 +3,7 @@ import { Exercise } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import {
+  ExerciseHistoryPoint,
   ExercisesService,
   PreviousSession,
 } from './exercises.service';
@@ -25,5 +26,15 @@ export class ExercisesController {
     @Param('id') id: string,
   ): Promise<PreviousSession | null> {
     return this.exercisesService.previousSession(user.id, id);
+  }
+
+  // Progresión del ejercicio en el tiempo (requiere sesión)
+  @Get(':id/history')
+  @UseGuards(JwtAuthGuard)
+  history(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<ExerciseHistoryPoint[]> {
+    return this.exercisesService.history(user.id, id);
   }
 }
