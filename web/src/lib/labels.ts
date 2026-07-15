@@ -23,3 +23,6 @@ export const EQUIPMENT_LABELS: Record<string, string> = {
 
 export const muscleLabel = (m: string): string => MUSCLE_LABELS[m] ?? m;
 export const equipmentLabel = (e: string): string => EQUIPMENT_LABELS[e] ?? e;
+
+export const MUSCLE_KEYS = Object.keys(MUSCLE_LABELS);
+export const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS);

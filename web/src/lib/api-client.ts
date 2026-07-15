@@ -9,6 +9,9 @@ export type Exercise = {
   primaryMuscle: string;
   secondaryMuscles: string[];
   equipment: string;
+  description: string | null;
+  videoUrl: string | null;
+  editable: boolean;
   createdAt: string;
 };
 

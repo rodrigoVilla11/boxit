@@ -63,6 +63,42 @@ export async function getExercises(): Promise<Exercise[]> {
   return json<Exercise[]>(res, 'No pudimos cargar la librería.');
 }
 
+export type ExerciseInput = {
+  name: string;
+  primaryMuscle: string;
+  secondaryMuscles: string[];
+  equipment: string;
+  description?: string;
+  videoUrl?: string;
+};
+
+export async function createExercise(input: ExerciseInput): Promise<Exercise> {
+  const res = await apiFetch('/api/exercises', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return json<Exercise>(res, 'No pudimos crear el ejercicio.');
+}
+
+export async function updateExercise(
+  id: string,
+  input: ExerciseInput,
+): Promise<Exercise> {
+  const res = await apiFetch(`/api/exercises/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return json<Exercise>(res, 'No pudimos guardar el ejercicio.');
+}
+
+export async function deleteExercise(id: string): Promise<void> {
+  const res = await apiFetch(`/api/exercises/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data: unknown = await res.json().catch(() => ({}));
+    throw new Error(extractError(data, 'No pudimos eliminar el ejercicio.'));
+  }
+}
+
 export async function getActiveWorkout(): Promise<Workout | null> {
   const res = await apiFetch('/api/workouts/active');
   return json<Workout | null>(res, 'No pudimos cargar el entreno.');

@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dumbbell, Info, Loader2, Search, X } from 'lucide-react';
-import { getExercises, type Exercise } from '@/lib/workouts';
+import { Dumbbell, Info, Loader2, Plus, Search, X } from 'lucide-react';
+import { deleteExercise, getExercises, type Exercise } from '@/lib/workouts';
 import { equipmentLabel, muscleLabel } from '@/lib/labels';
 import { ExerciseDetail } from '@/components/progress/exercise-detail';
+import { ExerciseForm } from '@/components/progress/exercise-form';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const normalize = (s: string): string =>
   s
@@ -27,6 +29,27 @@ export function ExercisePicker({
   const [query, setQuery] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formInitial, setFormInitial] = useState<Exercise | null>(null);
+  const [toDelete, setToDelete] = useState<Exercise | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function reload() {
+    getExercises().then(setItems).catch(() => {});
+  }
+
+  async function confirmDelete() {
+    if (!toDelete) return;
+    const ex = toDelete;
+    setToDelete(null);
+    try {
+      await deleteExercise(ex.id);
+      setDetail(null);
+      reload();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'No se pudo eliminar.');
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +114,24 @@ export function ExercisePicker({
       </header>
 
       <div className="app-shell w-full flex-1 overflow-y-auto px-4 pb-safe pt-3">
+        <button
+          type="button"
+          onClick={() => {
+            setFormInitial(null);
+            setFormOpen(true);
+          }}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 py-2.5 font-semibold text-primary transition hover:bg-primary/15"
+        >
+          <Plus className="h-5 w-5" />
+          Crear ejercicio
+        </button>
+
+        {notice && (
+          <p className="mb-2 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
+            {notice}
+          </p>
+        )}
+
         {items === null ? (
           <div className="flex justify-center py-10 text-textMuted">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -139,7 +180,38 @@ export function ExercisePicker({
         )}
       </div>
 
-      <ExerciseDetail exercise={detail} onClose={() => setDetail(null)} />
+      <ExerciseDetail
+        exercise={detail}
+        onClose={() => setDetail(null)}
+        onEdit={(e) => {
+          setDetail(null);
+          setFormInitial(e);
+          setFormOpen(true);
+        }}
+        onDelete={(e) => setToDelete(e)}
+      />
+
+      {formOpen && (
+        <ExerciseForm
+          initial={formInitial}
+          onClose={() => setFormOpen(false)}
+          onSaved={() => {
+            setFormOpen(false);
+            setNotice(null);
+            reload();
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="¿Eliminar ejercicio?"
+        message={`Se va a eliminar "${toDelete?.name ?? ''}".`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
