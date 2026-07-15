@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dumbbell, Loader2, Plus } from 'lucide-react';
 import { BrandMark } from '@/components/brand-mark';
@@ -13,22 +13,65 @@ import { RestTimerBar } from '@/components/workout/rest-timer-bar';
 import { WorkoutHeader } from '@/components/workout/workout-header';
 import { useActiveWorkout } from '@/hooks/use-active-workout';
 import { useRestTimer } from '@/hooks/use-rest-timer';
+import { useToast } from '@/components/toast-provider';
 import { logout } from '@/lib/auth';
-import type { SetPatch, Workout } from '@/lib/workouts';
+import { getPersonalRecords, type PersonalRecord, type SetPatch, type Workout } from '@/lib/workouts';
+import { bumpRecord, isNewPr } from '@/lib/prs';
 
 export default function EntrenoPage() {
   const router = useRouter();
   const wo = useActiveWorkout();
   const rest = useRestTimer();
+  const toast = useToast();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [summary, setSummary] = useState<Workout | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  // Récords base (entrenos terminados) para detectar PRs en vivo. La baseline
+  // no se muta (alimenta la insignia); `celebrated` evita re-festejar.
+  const [prs, setPrs] = useState<Record<string, PersonalRecord>>({});
+  const celebrated = useRef<Record<string, PersonalRecord>>({});
+
+  useEffect(() => {
+    getPersonalRecords()
+      .then((list) =>
+        setPrs(Object.fromEntries(list.map((p) => [p.exerciseId, p]))),
+      )
+      .catch(() => {});
+  }, []);
+
   async function onSaveSet(setId: string, patch: SetPatch) {
+    const ex = wo.workout?.exercises.find((e) =>
+      e.sets.some((s) => s.id === setId),
+    );
+    const set = ex?.sets.find((s) => s.id === setId);
     const ok = await wo.saveSet(setId, patch);
-    if (ok && patch.completed === true) rest.start();
+    if (!ok) return;
+    if (patch.completed === true) {
+      rest.start();
+      // ¿Récord? Compará el peso/reps recién completados con el mejor previo.
+      if (
+        ex &&
+        set?.type === 'NORMAL' &&
+        patch.weight != null &&
+        patch.reps != null
+      ) {
+        const effective = celebrated.current[ex.exerciseId] ?? prs[ex.exerciseId];
+        if (isNewPr(effective, patch.weight, patch.reps)) {
+          toast.success(`¡Nuevo récord en ${ex.exercise.name}! 🏆`);
+          if (typeof navigator !== 'undefined') navigator.vibrate?.([60, 40, 120]);
+          celebrated.current[ex.exerciseId] = bumpRecord(
+            effective,
+            ex.exerciseId,
+            ex.exercise.name,
+            patch.weight,
+            patch.reps,
+          );
+        }
+      }
+    }
   }
 
   async function onFinish() {
@@ -121,6 +164,7 @@ export default function EntrenoPage() {
               key={we.id}
               we={we}
               previous={wo.previous[we.exerciseId] ?? null}
+              record={prs[we.exerciseId]}
               onSaveSet={onSaveSet}
               onAddSet={wo.addSet}
               onRemoveSet={wo.removeSet}

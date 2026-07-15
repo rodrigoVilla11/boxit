@@ -6,11 +6,18 @@ import { SetRow } from './set-row';
 import { useUnit } from '@/components/unit-provider';
 import { unitLabel } from '@/lib/units';
 import { muscleLabel } from '@/lib/labels';
-import type { PreviousSession, SetPatch, WorkoutExercise } from '@/lib/workouts';
+import { bestPrSetId } from '@/lib/prs';
+import type {
+  PersonalRecord,
+  PreviousSession,
+  SetPatch,
+  WorkoutExercise,
+} from '@/lib/workouts';
 
 export function ExerciseCard({
   we,
   previous,
+  record,
   onSaveSet,
   onAddSet,
   onRemoveSet,
@@ -19,6 +26,7 @@ export function ExerciseCard({
 }: {
   we: WorkoutExercise;
   previous: PreviousSession;
+  record?: PersonalRecord;
   onSaveSet: (setId: string, patch: SetPatch) => void;
   onAddSet: (workoutExerciseId: string) => void;
   onRemoveSet: (setId: string) => void;
@@ -26,6 +34,9 @@ export function ExerciseCard({
   onRemoveExercise: (workoutExerciseId: string) => void;
 }) {
   const { unit } = useUnit();
+
+  // Serie que ostenta el récord en vivo (una sola insignia por ejercicio)
+  const prSetId = bestPrSetId(we.sets, record);
 
   // "Anterior" se alinea por serie de TRABAJO (NORMAL), no por índice de fila:
   // la n-ésima serie normal actual se compara con la n-ésima de la sesión previa;
@@ -80,6 +91,7 @@ export function ExerciseCard({
             index={i}
             set={set}
             previous={previousForRow[i]}
+            isPr={set.id === prSetId}
             onSave={onSaveSet}
             onRemove={onRemoveSet}
             onToggleWarmup={onToggleWarmup}
