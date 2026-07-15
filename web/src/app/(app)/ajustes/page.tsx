@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, LogOut } from 'lucide-react';
+import { Bell, ChevronLeft, LogOut, Minus, Plus, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { useUnit } from '@/components/unit-provider';
+import { usePreferences } from '@/components/preferences-provider';
 import { getMe, logout, type SessionUser } from '@/lib/auth';
 import type { WeightUnit } from '@/lib/units';
 
@@ -17,6 +18,7 @@ const UNITS: { value: WeightUnit; label: string }[] = [
 export default function AjustesPage() {
   const router = useRouter();
   const { unit, setUnit } = useUnit();
+  const prefs = usePreferences();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -79,6 +81,56 @@ export default function AjustesPage() {
         </p>
       </section>
 
+      <section className="mt-5">
+        <h2 className="mb-2 text-sm font-semibold text-textMuted">Descanso</h2>
+        <div className="space-y-2">
+          <ToggleRow
+            icon={<Volume2 className="h-5 w-5 shrink-0 text-primary" />}
+            title="Sonido al terminar"
+            subtitle="Un beep cuando se acaba el descanso."
+            on={prefs.sound}
+            onToggle={() => prefs.setSound(!prefs.sound)}
+          />
+          <ToggleRow
+            icon={<Bell className="h-5 w-5 shrink-0 text-primary" />}
+            title="Notificación al terminar"
+            subtitle="Aviso aunque tengas la app en segundo plano."
+            on={prefs.notifications}
+            onToggle={() => prefs.setNotifications(!prefs.notifications)}
+          />
+          <div className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-text">
+                Descanso por defecto
+              </span>
+              <span className="block text-xs text-textMuted">
+                Se arranca al completar una serie.
+              </span>
+            </span>
+            <button
+              type="button"
+              aria-label="Restar 15s"
+              onClick={() => prefs.setDefaultRest(prefs.defaultRest - 15)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-surfaceRaised text-text active:scale-95"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="w-14 text-center font-display text-base font-semibold tabular-nums text-text">
+              {Math.floor(prefs.defaultRest / 60)}:
+              {String(prefs.defaultRest % 60).padStart(2, '0')}
+            </span>
+            <button
+              type="button"
+              aria-label="Sumar 15s"
+              onClick={() => prefs.setDefaultRest(prefs.defaultRest + 15)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-surfaceRaised text-text active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
       <div className="mt-auto pb-6 pt-8">
         <Button variant="ghost" onClick={onLogout} loading={loggingOut}>
           <LogOut className="h-5 w-5" />
@@ -86,5 +138,47 @@ export default function AjustesPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+function ToggleRow({
+  icon,
+  title,
+  subtitle,
+  on,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={on}
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+    >
+      {icon}
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-text">{title}</span>
+        <span className="block text-xs text-textMuted">{subtitle}</span>
+      </span>
+      <span
+        className={cn(
+          'relative h-6 w-10 shrink-0 rounded-full transition',
+          on ? 'bg-primary' : 'bg-surfaceRaised',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all',
+            on ? 'left-[1.125rem]' : 'left-0.5',
+          )}
+        />
+      </span>
+    </button>
   );
 }

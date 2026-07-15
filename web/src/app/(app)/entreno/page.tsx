@@ -9,10 +9,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { FinishSummary } from '@/components/workout/finish-summary';
-import { RestTimerBar } from '@/components/workout/rest-timer-bar';
 import { WorkoutHeader } from '@/components/workout/workout-header';
 import { useActiveWorkout } from '@/hooks/use-active-workout';
-import { useRestTimer } from '@/hooks/use-rest-timer';
+import { useRestTimerCtx } from '@/components/rest-timer-provider';
+import { useWakeLock } from '@/hooks/use-wake-lock';
 import { useToast } from '@/components/toast-provider';
 import { logout } from '@/lib/auth';
 import { getPersonalRecords, type PersonalRecord, type SetPatch, type Workout } from '@/lib/workouts';
@@ -21,8 +21,11 @@ import { bumpRecord, isNewPr } from '@/lib/prs';
 export default function EntrenoPage() {
   const router = useRouter();
   const wo = useActiveWorkout();
-  const rest = useRestTimer();
+  const rest = useRestTimerCtx();
   const toast = useToast();
+
+  // Pantalla encendida mientras haya un entreno activo
+  useWakeLock(!!wo.workout);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [summary, setSummary] = useState<Workout | null>(null);
@@ -188,10 +191,6 @@ export default function EntrenoPage() {
         {/* espacio para que el rest timer no tape el último contenido */}
         {rest.active && <div className="h-16" aria-hidden />}
       </div>
-
-      {rest.active && (
-        <RestTimerBar seconds={rest.seconds} onAdd={() => rest.add(15)} onSkip={rest.skip} />
-      )}
 
       <ExercisePicker
         open={pickerOpen}
