@@ -6,6 +6,7 @@ export type SessionUser = {
   email: string;
   name: string;
   weightUnit: WeightUnit;
+  isAdmin: boolean;
 };
 
 async function parse(res: Response): Promise<unknown> {

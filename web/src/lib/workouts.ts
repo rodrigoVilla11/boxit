@@ -70,6 +70,7 @@ export type ExerciseInput = {
   equipment: string;
   description?: string;
   videoUrl?: string;
+  global?: boolean;
 };
 
 export async function createExercise(input: ExerciseInput): Promise<Exercise> {

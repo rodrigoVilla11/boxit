@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Globe, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { getMe } from '@/lib/auth';
 import { TextField } from '@/components/ui/text-field';
 import {
   EQUIPMENT_KEYS,
@@ -37,6 +38,14 @@ export function ExerciseForm({
   const [videoUrl, setVideoUrl] = useState(initial?.videoUrl ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [global, setGlobal] = useState(true);
+
+  useEffect(() => {
+    getMe()
+      .then((u) => setIsAdmin(!!u?.isAdmin))
+      .catch(() => {});
+  }, []);
 
   const canSave = name.trim().length >= 2 && !saving;
 
@@ -56,6 +65,7 @@ export function ExerciseForm({
       equipment,
       description: description.trim() || undefined,
       videoUrl: videoUrl.trim() || undefined,
+      global: !editing && isAdmin ? global : undefined,
     };
     try {
       const saved = editing
@@ -180,6 +190,37 @@ export function ExerciseForm({
           inputMode="url"
           placeholder="https://youtube.com/watch?v=…"
         />
+
+        {isAdmin && !editing && (
+          <button
+            type="button"
+            onClick={() => setGlobal((g) => !g)}
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+          >
+            <Globe className="h-5 w-5 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-text">
+                Global (para todos)
+              </span>
+              <span className="block text-xs text-textMuted">
+                Como admin, se agrega a la librería de todos los usuarios.
+              </span>
+            </span>
+            <span
+              className={cn(
+                'relative h-6 w-10 shrink-0 rounded-full transition',
+                global ? 'bg-primary' : 'bg-surfaceRaised',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all',
+                  global ? 'left-[1.125rem]' : 'left-0.5',
+                )}
+              />
+            </span>
+          </button>
+        )}
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
