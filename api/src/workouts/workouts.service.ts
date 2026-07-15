@@ -166,7 +166,7 @@ export class WorkoutsService {
   async muscleMap(
     userId: string,
     days = 30,
-  ): Promise<{ muscle: Muscle; sets: number; volume: number }[]> {
+  ): Promise<{ muscle: Muscle; sets: number; score: number }[]> {
     const since = new Date(Date.now() - days * 86_400_000);
     const sets = await this.prisma.workoutSet.findMany({
       where: {
@@ -177,27 +177,35 @@ export class WorkoutsService {
         },
       },
       select: {
-        weight: true,
-        reps: true,
         workoutExercise: {
-          select: { exercise: { select: { primaryMuscle: true } } },
+          select: {
+            exercise: {
+              select: { primaryMuscle: true, secondaryMuscles: true },
+            },
+          },
         },
       },
     });
 
-    const acc = new Map<Muscle, { sets: number; volume: number }>();
-    for (const s of sets) {
-      const m = s.workoutExercise.exercise.primaryMuscle;
-      const cur = acc.get(m) ?? { sets: 0, volume: 0 };
-      cur.sets += 1;
-      cur.volume += s.weight * s.reps;
+    // sets = series donde el músculo es primario (trabajo directo)
+    // score = intensidad ponderada: primario 1.0, cada secundario 0.5
+    const acc = new Map<Muscle, { sets: number; score: number }>();
+    const bump = (m: Muscle, sets: number, score: number) => {
+      const cur = acc.get(m) ?? { sets: 0, score: 0 };
+      cur.sets += sets;
+      cur.score += score;
       acc.set(m, cur);
+    };
+    for (const s of sets) {
+      const ex = s.workoutExercise.exercise;
+      bump(ex.primaryMuscle, 1, 1);
+      for (const sm of ex.secondaryMuscles) bump(sm, 0, 0.5);
     }
 
     return Object.values(Muscle).map((muscle) => ({
       muscle,
       sets: acc.get(muscle)?.sets ?? 0,
-      volume: acc.get(muscle)?.volume ?? 0,
+      score: Math.round((acc.get(muscle)?.score ?? 0) * 10) / 10,
     }));
   }
 

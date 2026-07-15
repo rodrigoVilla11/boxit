@@ -76,11 +76,12 @@ model RefreshToken {
 // ----------------------------- Librería --------------------------
 
 model Exercise {
-  id            String    @id @default(cuid())
-  name          String    @unique
-  primaryMuscle Muscle
-  equipment     Equipment
-  createdAt     DateTime  @default(now())
+  id               String    @id @default(cuid())
+  name             String    @unique
+  primaryMuscle    Muscle
+  secondaryMuscles Muscle[]  @default([])
+  equipment        Equipment
+  createdAt        DateTime  @default(now())
 
   routineExercises RoutineExercise[]
   workoutExercises WorkoutExercise[]
