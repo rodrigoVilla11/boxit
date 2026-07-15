@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   Calculator,
   Check,
   ChevronDown,
@@ -37,6 +39,8 @@ export function SetRow({
   onSave,
   onRemove,
   onToggleWarmup,
+  onMoveUp,
+  onMoveDown,
 }: {
   index: number;
   set: WorkoutSet;
@@ -45,6 +49,8 @@ export function SetRow({
   onSave: (setId: string, patch: SetPatch) => void;
   onRemove: (setId: string) => void;
   onToggleWarmup: (setId: string, warmup: boolean) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }) {
   const { unit } = useUnit();
   const [weight, setWeight] = useState(() => weightInputValue(set.weight, unit));
@@ -145,6 +151,18 @@ export function SetRow({
             <Flame className="h-4 w-4" />
             {isWarmup ? 'Volver a normal' : 'Convertir en warmup'}
           </MenuItem>
+          {onMoveUp && (
+            <MenuItem onClick={onMoveUp}>
+              <ArrowUp className="h-4 w-4" />
+              Subir
+            </MenuItem>
+          )}
+          {onMoveDown && (
+            <MenuItem onClick={onMoveDown}>
+              <ArrowDown className="h-4 w-4" />
+              Bajar
+            </MenuItem>
+          )}
           <MenuItem danger onClick={() => onRemove(set.id)}>
             <Trash2 className="h-4 w-4" />
             Eliminar serie

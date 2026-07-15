@@ -2,7 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, Loader2, Plus } from 'lucide-react';
+import { Dumbbell, GripVertical, Loader2, Plus } from 'lucide-react';
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -15,7 +30,13 @@ import { useRestTimerCtx } from '@/components/rest-timer-provider';
 import { useWakeLock } from '@/hooks/use-wake-lock';
 import { useToast } from '@/components/toast-provider';
 import { logout } from '@/lib/auth';
-import { getPersonalRecords, type PersonalRecord, type SetPatch, type Workout } from '@/lib/workouts';
+import {
+  getPersonalRecords,
+  type PersonalRecord,
+  type SetPatch,
+  type Workout,
+  type WorkoutExercise,
+} from '@/lib/workouts';
 import { bumpRecord, isNewPr } from '@/lib/prs';
 
 export default function EntrenoPage() {
@@ -31,6 +52,21 @@ export default function EntrenoPage() {
   const [summary, setSummary] = useState<Workout | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  // Sensor con umbral chico: el arrastre sólo se activa desde el grip
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  function onExerciseDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id || !wo.workout) return;
+    const ids = wo.workout.exercises.map((x) => x.id);
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    wo.reorderExercises(arrayMove(ids, from, to));
+  }
 
   // Récords base (entrenos terminados) para detectar PRs en vivo. La baseline
   // no se muta (alimenta la insignia); `celebrated` evita re-festejar.
@@ -162,21 +198,35 @@ export default function EntrenoPage() {
             </p>
           </div>
         ) : (
-          workout.exercises.map((we) => (
-            <ExerciseCard
-              key={we.id}
-              we={we}
-              previous={wo.previous[we.exerciseId] ?? null}
-              record={prs[we.exerciseId]}
-              onSaveSet={onSaveSet}
-              onAddSet={wo.addSet}
-              onRemoveSet={wo.removeSet}
-              onToggleWarmup={(setId, warmup) =>
-                wo.saveSet(setId, { type: warmup ? 'WARMUP' : 'NORMAL' })
-              }
-              onRemoveExercise={wo.removeExercise}
-            />
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onExerciseDragEnd}
+          >
+            <SortableContext
+              items={workout.exercises.map((we) => we.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3">
+                {workout.exercises.map((we) => (
+                  <SortableExercise
+                    key={we.id}
+                    we={we}
+                    previous={wo.previous[we.exerciseId] ?? null}
+                    record={prs[we.exerciseId]}
+                    onSaveSet={onSaveSet}
+                    onAddSet={wo.addSet}
+                    onRemoveSet={wo.removeSet}
+                    onToggleWarmup={(setId, warmup) =>
+                      wo.saveSet(setId, { type: warmup ? 'WARMUP' : 'NORMAL' })
+                    }
+                    onRemoveExercise={wo.removeExercise}
+                    onReorderSets={wo.reorderSets}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         <button
@@ -209,6 +259,42 @@ export default function EntrenoPage() {
         onConfirm={onDiscard}
         onCancel={() => setConfirmDiscard(false)}
       />
+    </div>
+  );
+}
+
+/** Envuelve ExerciseCard con drag-reorder (arrastre sólo desde el grip). */
+function SortableExercise({
+  we,
+  ...props
+}: {
+  we: WorkoutExercise;
+} & Omit<React.ComponentProps<typeof ExerciseCard>, 'we' | 'dragHandle'>) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: we.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+  };
+
+  const handle = (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      aria-label="Reordenar ejercicio"
+      className="-ml-1 mt-0.5 flex h-6 w-6 shrink-0 touch-none items-center justify-center rounded-md text-textMuted hover:text-text"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ExerciseCard we={we} dragHandle={handle} {...props} />
     </div>
   );
 }

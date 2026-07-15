@@ -22,6 +22,40 @@ function replaceSet(workout: Workout, updated: WorkoutSet): Workout {
   };
 }
 
+// Reordena localmente los ejercicios según `ids` (para la UI optimista).
+function reorderExercisesLocal(workout: Workout, ids: string[]): Workout {
+  const byId = new Map(workout.exercises.map((e) => [e.id, e]));
+  const next = ids
+    .map((id, i) => {
+      const e = byId.get(id);
+      return e ? { ...e, order: i + 1 } : null;
+    })
+    .filter((e): e is Workout['exercises'][number] => e !== null);
+  return { ...workout, exercises: next };
+}
+
+// Reordena localmente las series de un ejercicio según `ids`.
+function reorderSetsLocal(
+  workout: Workout,
+  workoutExerciseId: string,
+  ids: string[],
+): Workout {
+  return {
+    ...workout,
+    exercises: workout.exercises.map((we) => {
+      if (we.id !== workoutExerciseId) return we;
+      const byId = new Map(we.sets.map((s) => [s.id, s]));
+      const sets = ids
+        .map((id, i) => {
+          const s = byId.get(id);
+          return s ? { ...s, order: i + 1 } : null;
+        })
+        .filter((s): s is WorkoutSet => s !== null);
+      return { ...we, sets };
+    }),
+  };
+}
+
 export type UseActiveWorkout = {
   workout: Workout | null;
   previous: Record<string, PreviousSession>;
@@ -35,6 +69,8 @@ export type UseActiveWorkout = {
   addSet: (workoutExerciseId: string) => Promise<boolean>;
   removeSet: (setId: string) => Promise<boolean>;
   saveSet: (setId: string, patch: SetPatch) => Promise<boolean>;
+  reorderExercises: (ids: string[]) => Promise<boolean>;
+  reorderSets: (workoutExerciseId: string, ids: string[]) => Promise<boolean>;
   finish: () => Promise<Workout | null>;
   discard: () => Promise<void>;
 };
@@ -148,6 +184,18 @@ export function useActiveWorkout(): UseActiveWorkout {
       setWorkout((w) => (w ? replaceSet(w, updated) : w));
     });
 
+  const reorderExercises = (ids: string[]) =>
+    run(async () => {
+      setWorkout((w) => (w ? reorderExercisesLocal(w, ids) : w)); // optimista
+      setWorkout(await api.reorderExercises(guardedId(), ids));
+    });
+
+  const reorderSets = (workoutExerciseId: string, ids: string[]) =>
+    run(async () => {
+      setWorkout((w) => (w ? reorderSetsLocal(w, workoutExerciseId, ids) : w));
+      setWorkout(await api.reorderSets(guardedId(), workoutExerciseId, ids));
+    });
+
   const finish = async (): Promise<Workout | null> => {
     try {
       const done = await api.finishWorkout(guardedId());
@@ -182,6 +230,8 @@ export function useActiveWorkout(): UseActiveWorkout {
     addSet,
     removeSet,
     saveSet,
+    reorderExercises,
+    reorderSets,
     finish,
     discard,
   };
