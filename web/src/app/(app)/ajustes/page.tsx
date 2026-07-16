@@ -2,12 +2,35 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, ChevronLeft, LogOut, Minus, Plus, Volume2 } from 'lucide-react';
+import {
+  Bell,
+  Check,
+  ChevronLeft,
+  Download,
+  KeyRound,
+  LogOut,
+  Minus,
+  Pencil,
+  Plus,
+  Trash2,
+  Volume2,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
+import { TextField } from '@/components/ui/text-field';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useUnit } from '@/components/unit-provider';
 import { usePreferences } from '@/components/preferences-provider';
-import { getMe, logout, type SessionUser } from '@/lib/auth';
+import { useToast } from '@/components/toast-provider';
+import {
+  changePassword,
+  deleteAccount,
+  getMe,
+  logout,
+  updateProfile,
+  type SessionUser,
+} from '@/lib/auth';
+import { exportCsv, exportJson } from '@/lib/export';
 import type { WeightUnit } from '@/lib/units';
 
 const UNITS: { value: WeightUnit; label: string }[] = [
@@ -19,14 +42,90 @@ export default function AjustesPage() {
   const router = useRouter();
   const { unit, setUnit } = useUnit();
   const prefs = usePreferences();
+  const toast = useToast();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Nombre editable
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  // Cambiar contraseña
+  const [pwOpen, setPwOpen] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [savingPw, setSavingPw] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   useEffect(() => {
     getMe()
-      .then(setUser)
+      .then((u) => {
+        setUser(u);
+        setNameInput(u?.name ?? '');
+      })
       .catch(() => {});
   }, []);
+
+  async function saveName() {
+    const name = nameInput.trim();
+    if (name.length < 2 || name === user?.name) {
+      setEditingName(false);
+      setNameInput(user?.name ?? '');
+      return;
+    }
+    setSavingName(true);
+    try {
+      const updated = await updateProfile({ name });
+      setUser(updated);
+      setEditingName(false);
+      toast.success('Nombre actualizado.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No se pudo guardar.');
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function savePassword() {
+    if (curPw.length < 1 || newPw.length < 8) return;
+    setSavingPw(true);
+    try {
+      await changePassword(curPw, newPw);
+      setPwOpen(false);
+      setCurPw('');
+      setNewPw('');
+      toast.success('Contraseña actualizada.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No pudimos cambiar la contraseña.');
+    } finally {
+      setSavingPw(false);
+    }
+  }
+
+  async function doExport(kind: 'json' | 'csv') {
+    setExporting(true);
+    try {
+      await (kind === 'json' ? exportJson() : exportCsv());
+    } catch {
+      toast.error('No pudimos exportar tus datos.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function onDeleteAccount() {
+    setConfirmDelete(false);
+    try {
+      await deleteAccount();
+      router.replace('/register');
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No pudimos borrar la cuenta.');
+    }
+  }
 
   async function onLogout() {
     setLoggingOut(true);
@@ -36,7 +135,7 @@ export default function AjustesPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col pb-8">
       <header className="flex items-center gap-1 pt-safe">
         <button
           type="button"
@@ -49,13 +148,53 @@ export default function AjustesPage() {
         <h1 className="mt-5 font-display text-xl font-bold text-text">Ajustes</h1>
       </header>
 
+      {/* Cuenta */}
       {user && (
         <div className="mt-5 rounded-2xl bg-surface p-4 shadow-card">
-          <p className="font-display font-semibold text-text">{user.name}</p>
-          <p className="text-sm text-textMuted">{user.email}</p>
+          {editingName ? (
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <TextField
+                  label="Nombre"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  maxLength={60}
+                  autoFocus
+                />
+              </div>
+              <button
+                type="button"
+                onClick={saveName}
+                disabled={savingName}
+                aria-label="Guardar nombre"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-ink disabled:opacity-40"
+              >
+                <Check className="h-5 w-5" strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="font-display font-semibold text-text">{user.name}</p>
+                <p className="truncate text-sm text-textMuted">{user.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameInput(user.name);
+                  setEditingName(true);
+                }}
+                aria-label="Editar nombre"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-textMuted hover:text-text"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Unidad de peso */}
       <section className="mt-5">
         <h2 className="mb-2 text-sm font-semibold text-textMuted">Unidad de peso</h2>
         <div className="flex gap-1 rounded-2xl bg-surface p-1">
@@ -67,9 +206,7 @@ export default function AjustesPage() {
               aria-pressed={unit === u.value}
               className={cn(
                 'flex-1 rounded-xl py-2.5 text-sm font-semibold transition',
-                unit === u.value
-                  ? 'bg-primary text-ink'
-                  : 'text-textMuted hover:text-text',
+                unit === u.value ? 'bg-primary text-ink' : 'text-textMuted hover:text-text',
               )}
             >
               {u.label}
@@ -81,6 +218,7 @@ export default function AjustesPage() {
         </p>
       </section>
 
+      {/* Descanso */}
       <section className="mt-5">
         <h2 className="mb-2 text-sm font-semibold text-textMuted">Descanso</h2>
         <div className="space-y-2">
@@ -131,12 +269,112 @@ export default function AjustesPage() {
         </div>
       </section>
 
-      <div className="mt-auto pb-6 pt-8">
+      {/* Seguridad y datos */}
+      <section className="mt-5">
+        <h2 className="mb-2 text-sm font-semibold text-textMuted">Cuenta y datos</h2>
+        <div className="space-y-2">
+          {pwOpen ? (
+            <div className="space-y-3 rounded-2xl bg-surface p-4">
+              <TextField
+                label="Contraseña actual"
+                type="password"
+                value={curPw}
+                onChange={(e) => setCurPw(e.target.value)}
+                autoComplete="current-password"
+              />
+              <TextField
+                label="Nueva contraseña"
+                type="password"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPwOpen(false);
+                    setCurPw('');
+                    setNewPw('');
+                  }}
+                  className="h-11 flex-1 rounded-2xl bg-surfaceRaised text-sm font-semibold text-textMuted"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={savePassword}
+                  disabled={savingPw || newPw.length < 8 || !curPw}
+                  className="h-11 flex-1 rounded-2xl bg-primary text-sm font-semibold text-ink disabled:opacity-40"
+                >
+                  {savingPw ? 'Guardando…' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPwOpen(true)}
+              className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+            >
+              <KeyRound className="h-5 w-5 shrink-0 text-primary" />
+              <span className="flex-1 text-sm font-medium text-text">
+                Cambiar contraseña
+              </span>
+            </button>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => doExport('json')}
+              disabled={exporting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text disabled:opacity-40"
+            >
+              <Download className="h-4 w-4" />
+              Exportar JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => doExport('csv')}
+              disabled={exporting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text disabled:opacity-40"
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+          >
+            <Trash2 className="h-5 w-5 shrink-0 text-danger" />
+            <span className="flex-1 text-sm font-medium text-danger">
+              Borrar mi cuenta
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <div className="mt-6">
         <Button variant="ghost" onClick={onLogout} loading={loggingOut}>
           <LogOut className="h-5 w-5" />
           Cerrar sesión
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="¿Borrar tu cuenta?"
+        message="Se elimina tu cuenta y todos tus entrenos, rutinas y registros. No se puede deshacer."
+        confirmLabel="Borrar todo"
+        danger
+        onConfirm={onDeleteAccount}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

@@ -71,15 +71,52 @@ export class AuthService {
     };
   }
 
-  async updateWeightUnit(
+  /** Actualiza nombre y/o unidad de peso (ambos opcionales). */
+  async updateProfile(
     userId: string,
-    weightUnit: WeightUnit,
+    data: { weightUnit?: WeightUnit; name?: string },
   ): Promise<PublicUser> {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { weightUnit },
+      data: {
+        ...(data.weightUnit !== undefined ? { weightUnit: data.weightUnit } : {}),
+        ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      },
     });
     return this.toPublic(user);
+  }
+
+  /**
+   * Cambia la contraseña verificando la actual. Cierra todas las sesiones
+   * (revoca refresh tokens) y emite tokens nuevos para la sesión en curso.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<AuthResult> {
+    const user = await this.users.findById(userId);
+    if (!user) throw new UnauthorizedException();
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('La contraseña actual no es correcta.');
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    // cierra el resto de las sesiones por seguridad
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revoked: false },
+      data: { revoked: true },
+    });
+    return { user: this.toPublic(updated), ...(await this.issueTokens(updated)) };
+  }
+
+  /** Borra la cuenta y todo lo asociado (cascada de Prisma). */
+  async deleteAccount(userId: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id: userId } });
   }
 
   async register(dto: RegisterDto): Promise<AuthResult> {

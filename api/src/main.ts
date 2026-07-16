@@ -1,10 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Cabeceras de seguridad. Es una API JSON: el CSP lo maneja el front y
+  // habilitamos CORP cross-origin para que el front (otro origen) la consuma.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+
+  // Detrás de un proxy (nginx) para que el rate-limit vea la IP real del cliente
+  app.set('trust proxy', 1);
 
   // Cookies httpOnly (usadas a full en Fase 2 para JWT)
   app.use(cookieParser());

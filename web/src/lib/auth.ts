@@ -51,14 +51,38 @@ export async function getMe(): Promise<SessionUser | null> {
   return (data as { user: SessionUser }).user;
 }
 
-export async function updateWeightUnit(
-  weightUnit: WeightUnit,
-): Promise<SessionUser> {
+export async function updateProfile(patch: {
+  name?: string;
+  weightUnit?: WeightUnit;
+}): Promise<SessionUser> {
   const res = await apiFetch('/api/auth/me', {
     method: 'PATCH',
-    body: JSON.stringify({ weightUnit }),
+    body: JSON.stringify(patch),
   });
   const data = await parse(res);
   if (!res.ok) throw new Error(extractError(data, 'No se pudo guardar.'));
   return (data as { user: SessionUser }).user;
+}
+
+export function updateWeightUnit(weightUnit: WeightUnit): Promise<SessionUser> {
+  return updateProfile({ weightUnit });
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const res = await apiFetch('/api/auth/password', {
+    method: 'PATCH',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) {
+    const data = await parse(res);
+    throw new Error(extractError(data, 'No pudimos cambiar la contraseña.'));
+  }
+}
+
+export async function deleteAccount(): Promise<void> {
+  const res = await apiFetch('/api/auth/me', { method: 'DELETE' });
+  if (!res.ok) throw new Error('No pudimos borrar la cuenta.');
 }
