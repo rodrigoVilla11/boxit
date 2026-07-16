@@ -3,20 +3,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { BodyDiagram } from './body-diagram';
+import { cn } from '@/lib/cn';
 import { muscleColor } from '@/lib/muscle-color';
 import { muscleLabel } from '@/lib/labels';
 import { getMuscleMap, type MuscleKey, type MuscleStat } from '@/lib/progress';
 
-const WINDOW_DAYS = 30;
+const RANGES = [7, 30, 90];
 
 export function MuscleMap() {
+  const [days, setDays] = useState(30);
   const [stats, setStats] = useState<MuscleStat[] | null>(null);
 
   useEffect(() => {
-    getMuscleMap(WINDOW_DAYS)
+    setStats(null);
+    getMuscleMap(days)
       .then(setStats)
       .catch(() => setStats([]));
-  }, []);
+  }, [days]);
 
   const scoreByMuscle = useMemo(() => {
     const m = new Map<MuscleKey, number>();
@@ -39,9 +42,24 @@ export function MuscleMap() {
 
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-card">
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <h2 className="font-display text-base font-semibold text-text">Músculos</h2>
-        <span className="text-xs text-textMuted">últimos {WINDOW_DAYS} días</span>
+        <div className="flex gap-1 rounded-lg bg-surfaceRaised p-0.5">
+          {RANGES.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDays(d)}
+              aria-pressed={days === d}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-semibold transition',
+                days === d ? 'bg-primary text-ink' : 'text-textMuted hover:text-text',
+              )}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
       </div>
 
       {stats === null ? (

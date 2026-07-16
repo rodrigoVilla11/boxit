@@ -37,7 +37,9 @@ export async function getMuscleMap(days = 30): Promise<MuscleStat[]> {
 
 export async function getExerciseHistory(
   exerciseId: string,
+  days?: number,
 ): Promise<ExerciseHistoryPoint[]> {
-  const res = await apiFetch(`/api/exercises/${exerciseId}/history`);
+  const q = days && days > 0 ? `?days=${days}` : '';
+  const res = await apiFetch(`/api/exercises/${exerciseId}/history${q}`);
   return json<ExerciseHistoryPoint[]>(res, 'No pudimos cargar la progresión.');
 }

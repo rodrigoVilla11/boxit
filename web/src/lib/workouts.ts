@@ -119,6 +119,12 @@ export async function finishWorkout(id: string): Promise<Workout> {
   return json<Workout>(res, 'No pudimos terminar el entreno.');
 }
 
+/** Clona un entreno terminado en uno nuevo activo (sin completar). */
+export async function repeatWorkout(id: string): Promise<Workout> {
+  const res = await apiFetch(`/api/workouts/${id}/repeat`, { method: 'POST' });
+  return json<Workout>(res, 'No pudimos repetir el entreno.');
+}
+
 export async function discardWorkout(id: string): Promise<void> {
   const res = await apiFetch(`/api/workouts/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('No pudimos descartar el entreno.');

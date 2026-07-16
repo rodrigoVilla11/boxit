@@ -5,8 +5,10 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -62,12 +64,13 @@ export class ExercisesController {
     return this.exercisesService.previousSession(user.id, id);
   }
 
-  // Progresión del ejercicio en el tiempo
+  // Progresión del ejercicio en el tiempo (days opcional: 7/30/90…)
   @Get(':id/history')
   history(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
+    @Query('days', new ParseIntPipe({ optional: true })) days?: number,
   ): Promise<ExerciseHistoryPoint[]> {
-    return this.exercisesService.history(user.id, id);
+    return this.exercisesService.history(user.id, id, days);
   }
 }

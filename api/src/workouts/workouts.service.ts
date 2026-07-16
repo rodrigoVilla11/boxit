@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -243,6 +244,42 @@ export class WorkoutsService {
   async remove(userId: string, id: string): Promise<void> {
     await this.assertOwner(userId, id);
     await this.prisma.workout.delete({ where: { id } });
+  }
+
+  /**
+   * Repite un entreno: clona ejercicios y series (mismo peso/reps/tipo/orden)
+   * en un entreno nuevo, sin completar. Respeta "un activo por vez".
+   */
+  async repeat(userId: string, id: string): Promise<FullWorkout> {
+    const source = await this.getOne(userId, id);
+    const active = await this.prisma.workout.findFirst({
+      where: { userId, finishedAt: null },
+    });
+    if (active) {
+      throw new ConflictException(
+        'Ya tenés un entreno en curso. Terminalo o descartalo primero.',
+      );
+    }
+    const created = await this.prisma.workout.create({
+      data: {
+        userId,
+        exercises: {
+          create: source.exercises.map((we) => ({
+            exerciseId: we.exerciseId,
+            order: we.order,
+            sets: {
+              create: we.sets.map((s) => ({
+                order: s.order,
+                type: s.type,
+                weight: s.weight,
+                reps: s.reps,
+              })),
+            },
+          })),
+        },
+      },
+    });
+    return this.findFull(created.id);
   }
 
   async addExercise(

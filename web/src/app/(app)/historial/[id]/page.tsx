@@ -1,16 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Check, ChevronLeft, Loader2, Trophy } from 'lucide-react';
+import {
+  Check,
+  ChevronLeft,
+  ClipboardList,
+  Loader2,
+  RotateCcw,
+  Trophy,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { muscleLabel } from '@/lib/labels';
 import { formatDuration, formatSessionDate } from '@/lib/format';
 import { formatVolume, kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
 import { useUnit } from '@/components/unit-provider';
+import { useToast } from '@/components/toast-provider';
+import { createRoutine } from '@/lib/routines';
 import {
   getPersonalRecords,
   getWorkoutById,
+  repeatWorkout,
   type PersonalRecord,
   type Workout,
   type WorkoutSet,
@@ -19,10 +29,49 @@ import {
 export default function SessionDetailPage() {
   const router = useRouter();
   const { unit } = useUnit();
+  const toast = useToast();
   const { id } = useParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [prByExercise, setPrByExercise] = useState<Record<string, PersonalRecord>>({});
   const [notFound, setNotFound] = useState(false);
+  const [busy, setBusy] = useState<null | 'repeat' | 'routine'>(null);
+
+  async function onRepeat() {
+    if (busy) return;
+    setBusy('repeat');
+    try {
+      await repeatWorkout(id);
+      toast.success('Entreno cargado. ¡A darle!');
+      router.push('/entreno');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No pudimos repetir el entreno.');
+      setBusy(null);
+    }
+  }
+
+  async function onSaveAsRoutine() {
+    if (busy || !workout) return;
+    setBusy('routine');
+    try {
+      const name = `Rutina — ${formatSessionDate(workout.finishedAt)}`;
+      const exercises = workout.exercises.map((we) => {
+        const working = we.sets.filter((s) => s.type === 'NORMAL');
+        const first = working[0];
+        return {
+          exerciseId: we.exerciseId,
+          targetSets: Math.max(1, working.length),
+          targetReps: first?.reps || null,
+          targetWeight: first?.weight || null,
+        };
+      });
+      await createRoutine(name, exercises);
+      toast.success('Rutina guardada.');
+      router.push('/rutinas');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No pudimos guardar la rutina.');
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     getWorkoutById(id)
@@ -109,6 +158,35 @@ export default function SessionDetailPage() {
             </section>
           );
         })}
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-2 pb-4">
+        <button
+          type="button"
+          onClick={onRepeat}
+          disabled={!!busy}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary font-semibold text-ink transition hover:bg-primary-deep disabled:opacity-40"
+        >
+          {busy === 'repeat' ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <RotateCcw className="h-5 w-5" />
+          )}
+          Repetir
+        </button>
+        <button
+          type="button"
+          onClick={onSaveAsRoutine}
+          disabled={!!busy}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface font-semibold text-text ring-1 ring-white/10 transition hover:bg-surfaceRaised disabled:opacity-40"
+        >
+          {busy === 'routine' ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <ClipboardList className="h-5 w-5" />
+          )}
+          Guardar rutina
+        </button>
       </div>
     </div>
   );

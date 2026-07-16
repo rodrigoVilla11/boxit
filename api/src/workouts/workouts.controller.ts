@@ -63,6 +63,11 @@ export class WorkoutsController {
     return this.workouts.finish(user.id, id);
   }
 
+  @Post(':id/repeat')
+  repeat(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.workouts.repeat(user.id, id);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {

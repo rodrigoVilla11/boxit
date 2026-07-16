@@ -177,11 +177,16 @@ export class ExercisesService {
   async history(
     userId: string,
     exerciseId: string,
+    days?: number,
   ): Promise<ExerciseHistoryPoint[]> {
+    const finishedAt =
+      days && days > 0
+        ? { gte: new Date(Date.now() - days * 86_400_000) }
+        : { not: null };
     const wes = await this.prisma.workoutExercise.findMany({
       where: {
         exerciseId,
-        workout: { userId, finishedAt: { not: null } },
+        workout: { userId, finishedAt },
         sets: { some: { completed: true, type: 'NORMAL' } },
       },
       orderBy: { workout: { finishedAt: 'asc' } },
