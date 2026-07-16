@@ -18,6 +18,7 @@ import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
 import { ReorderDto } from './dto/reorder.dto';
+import { CreateWorkoutDto } from './dto/create-workout.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workouts')
@@ -25,8 +26,8 @@ export class WorkoutsController {
   constructor(private readonly workouts: WorkoutsService) {}
 
   @Post()
-  create(@CurrentUser() user: AuthUser) {
-    return this.workouts.create(user.id);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateWorkoutDto) {
+    return this.workouts.create(user.id, dto.id);
   }
 
   @Get()

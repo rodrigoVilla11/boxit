@@ -246,7 +246,7 @@ export default function EntrenoPage() {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onPick={async (ex) => {
-          await wo.addExercise(ex.id);
+          await wo.addExercise(ex);
         }}
       />
 

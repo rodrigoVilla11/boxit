@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/toast-provider';
+import { useSync } from '@/components/sync-provider';
 import * as api from '@/lib/workouts';
-import type { PreviousSession, SetPatch, Workout, WorkoutSet } from '@/lib/workouts';
+import type { Exercise, PreviousSession, SetPatch, Workout } from '@/lib/workouts';
+import { commit, getQueue, loadDoc, saveDoc } from '@/lib/offline/active-store';
+import type { Op } from '@/lib/offline/types';
 
 function friendlyError(e: unknown, fallback: string): string {
   const msg = e instanceof Error ? e.message : fallback;
@@ -12,49 +15,8 @@ function friendlyError(e: unknown, fallback: string): string {
     : msg;
 }
 
-function replaceSet(workout: Workout, updated: WorkoutSet): Workout {
-  return {
-    ...workout,
-    exercises: workout.exercises.map((we) => ({
-      ...we,
-      sets: we.sets.map((s) => (s.id === updated.id ? updated : s)),
-    })),
-  };
-}
-
-// Reordena localmente los ejercicios según `ids` (para la UI optimista).
-function reorderExercisesLocal(workout: Workout, ids: string[]): Workout {
-  const byId = new Map(workout.exercises.map((e) => [e.id, e]));
-  const next = ids
-    .map((id, i) => {
-      const e = byId.get(id);
-      return e ? { ...e, order: i + 1 } : null;
-    })
-    .filter((e): e is Workout['exercises'][number] => e !== null);
-  return { ...workout, exercises: next };
-}
-
-// Reordena localmente las series de un ejercicio según `ids`.
-function reorderSetsLocal(
-  workout: Workout,
-  workoutExerciseId: string,
-  ids: string[],
-): Workout {
-  return {
-    ...workout,
-    exercises: workout.exercises.map((we) => {
-      if (we.id !== workoutExerciseId) return we;
-      const byId = new Map(we.sets.map((s) => [s.id, s]));
-      const sets = ids
-        .map((id, i) => {
-          const s = byId.get(id);
-          return s ? { ...s, order: i + 1 } : null;
-        })
-        .filter((s): s is WorkoutSet => s !== null);
-      return { ...we, sets };
-    }),
-  };
-}
+const uuid = (): string => crypto.randomUUID();
+const now = (): number => Date.now();
 
 export type UseActiveWorkout = {
   workout: Workout | null;
@@ -63,8 +25,8 @@ export type UseActiveWorkout = {
   starting: boolean;
   error: string | null;
   start: () => Promise<void>;
-  // las mutaciones devuelven true si se guardó ok (ante error: toast + resync)
-  addExercise: (exerciseId: string) => Promise<boolean>;
+  // las mutaciones son local-first: devuelven true si se aplicó al doc local
+  addExercise: (exercise: Exercise) => Promise<boolean>;
   removeExercise: (workoutExerciseId: string) => Promise<boolean>;
   addSet: (workoutExerciseId: string) => Promise<boolean>;
   removeSet: (setId: string) => Promise<boolean>;
@@ -77,18 +39,32 @@ export type UseActiveWorkout = {
 
 export function useActiveWorkout(): UseActiveWorkout {
   const toast = useToast();
+  const sync = useSync();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [previous, setPrevious] = useState<Record<string, PreviousSession>>({});
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Hidratación: el doc local manda. Si no hay doc y no hay cola pendiente,
+  // traemos el activo del server (para no resucitar un entreno terminado offline).
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const active = await api.getActiveWorkout();
-        if (alive) setWorkout(active);
+        const doc = await loadDoc();
+        if (doc) {
+          if (alive) setWorkout(doc);
+        } else {
+          const queue = await getQueue().catch(() => []);
+          if (queue.length === 0 && navigator.onLine) {
+            const server = await api.getActiveWorkout();
+            if (server) await saveDoc(server);
+            if (alive) setWorkout(server);
+          } else if (alive) {
+            setWorkout(null);
+          }
+        }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : 'Error');
       } finally {
@@ -100,7 +76,7 @@ export function useActiveWorkout(): UseActiveWorkout {
     };
   }, []);
 
-  // Carga el "Anterior" de cada ejercicio del entreno (una vez por ejercicio)
+  // Carga el "Anterior" de cada ejercicio (server; offline queda sin dato)
   const exerciseKey = workout
     ? workout.exercises.map((e) => e.exerciseId).join(',')
     : '';
@@ -124,22 +100,15 @@ export function useActiveWorkout(): UseActiveWorkout {
     return workout.id;
   };
 
-  // Re-sincroniza el entreno con el server (rollback ante error de mutación)
-  const resync = async () => {
+  // Aplica un op al doc local + encola + dispara el sync. No falla por red.
+  const runCommit = async (op: Op): Promise<boolean> => {
     try {
-      setWorkout(await api.getActiveWorkout());
-    } catch {
-      /* sin conexión: dejamos el estado como está */
-    }
-  };
-
-  const run = async (fn: () => Promise<void>): Promise<boolean> => {
-    try {
-      await fn();
+      const next = await commit(op);
+      setWorkout(next);
+      sync.kick();
       return true;
     } catch (e) {
       toast.error(friendlyError(e, 'No se pudo guardar.'));
-      await resync();
       return false;
     }
   };
@@ -148,7 +117,9 @@ export function useActiveWorkout(): UseActiveWorkout {
     setStarting(true);
     setError(null);
     try {
-      setWorkout(await api.createWorkout());
+      const next = await commit({ kind: 'start', workoutId: uuid(), ts: now() });
+      setWorkout(next);
+      sync.kick();
     } catch (e) {
       const msg = friendlyError(e, 'No se pudo empezar el entreno.');
       setError(msg);
@@ -158,50 +129,73 @@ export function useActiveWorkout(): UseActiveWorkout {
     }
   };
 
-  const addExercise = (exerciseId: string) =>
-    run(async () => {
-      setWorkout(await api.addExercise(guardedId(), exerciseId));
+  const addExercise = (exercise: Exercise) =>
+    runCommit({
+      kind: 'addExercise',
+      workoutId: guardedId(),
+      weId: uuid(),
+      setId: uuid(),
+      exercise,
+      ts: now(),
     });
 
   const removeExercise = (workoutExerciseId: string) =>
-    run(async () => {
-      setWorkout(await api.removeExercise(guardedId(), workoutExerciseId));
+    runCommit({
+      kind: 'removeExercise',
+      workoutId: guardedId(),
+      weId: workoutExerciseId,
+      ts: now(),
     });
 
   const addSet = (workoutExerciseId: string) =>
-    run(async () => {
-      setWorkout(await api.addSet(guardedId(), workoutExerciseId));
+    runCommit({
+      kind: 'addSet',
+      workoutId: guardedId(),
+      weId: workoutExerciseId,
+      setId: uuid(),
+      ts: now(),
     });
 
   const removeSet = (setId: string) =>
-    run(async () => {
-      setWorkout(await api.removeSet(guardedId(), setId));
-    });
+    runCommit({ kind: 'removeSet', workoutId: guardedId(), setId, ts: now() });
 
   const saveSet = (setId: string, patch: SetPatch) =>
-    run(async () => {
-      const updated = await api.updateSet(guardedId(), setId, patch);
-      setWorkout((w) => (w ? replaceSet(w, updated) : w));
-    });
+    runCommit({ kind: 'updateSet', workoutId: guardedId(), setId, patch, ts: now() });
 
   const reorderExercises = (ids: string[]) =>
-    run(async () => {
-      setWorkout((w) => (w ? reorderExercisesLocal(w, ids) : w)); // optimista
-      setWorkout(await api.reorderExercises(guardedId(), ids));
-    });
+    runCommit({ kind: 'reorderExercises', workoutId: guardedId(), ids, ts: now() });
 
   const reorderSets = (workoutExerciseId: string, ids: string[]) =>
-    run(async () => {
-      setWorkout((w) => (w ? reorderSetsLocal(w, workoutExerciseId, ids) : w));
-      setWorkout(await api.reorderSets(guardedId(), workoutExerciseId, ids));
+    runCommit({
+      kind: 'reorderSets',
+      workoutId: guardedId(),
+      weId: workoutExerciseId,
+      ids,
+      ts: now(),
     });
 
   const finish = async (): Promise<Workout | null> => {
+    const doc = await loadDoc();
+    if (!doc) return null;
+    // resumen con totales calculados en cliente (el server los recomputa al sync)
+    const totals = api.liveTotals(doc);
+    const durationSec = Math.max(
+      0,
+      Math.round((Date.now() - new Date(doc.startedAt).getTime()) / 1000),
+    );
+    const finished: Workout = {
+      ...doc,
+      finishedAt: new Date().toISOString(),
+      durationSec,
+      totalVolume: totals.volume,
+      totalSets: totals.sets,
+    };
     try {
-      const done = await api.finishWorkout(guardedId());
+      await commit({ kind: 'finish', workoutId: doc.id, ts: now() });
       setWorkout(null);
       setPrevious({});
-      return done;
+      sync.kick();
+      return finished;
     } catch (e) {
       toast.error(friendlyError(e, 'No se pudo terminar el entreno.'));
       return null;
@@ -209,10 +203,16 @@ export function useActiveWorkout(): UseActiveWorkout {
   };
 
   const discard = async () => {
+    const doc = await loadDoc();
+    if (!doc) {
+      setWorkout(null);
+      return;
+    }
     try {
-      await api.discardWorkout(guardedId());
+      await commit({ kind: 'discard', workoutId: doc.id, ts: now() });
       setWorkout(null);
       setPrevious({});
+      sync.kick();
     } catch (e) {
       toast.error(friendlyError(e, 'No se pudo descartar.'));
     }

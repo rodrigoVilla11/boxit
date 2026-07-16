@@ -109,8 +109,11 @@ export async function getActiveWorkout(): Promise<Workout | null> {
   return json<Workout | null>(res, 'No pudimos cargar el entreno.');
 }
 
-export async function createWorkout(): Promise<Workout> {
-  const res = await apiFetch('/api/workouts', { method: 'POST' });
+export async function createWorkout(id?: string): Promise<Workout> {
+  const res = await apiFetch('/api/workouts', {
+    method: 'POST',
+    body: JSON.stringify(id ? { id } : {}),
+  });
   return json<Workout>(res, 'No pudimos empezar el entreno.');
 }
 
@@ -133,10 +136,11 @@ export async function discardWorkout(id: string): Promise<void> {
 export async function addExercise(
   id: string,
   exerciseId: string,
+  ids?: { id?: string; setId?: string },
 ): Promise<Workout> {
   const res = await apiFetch(`/api/workouts/${id}/exercises`, {
     method: 'POST',
-    body: JSON.stringify({ exerciseId }),
+    body: JSON.stringify({ exerciseId, ...ids }),
   });
   return json<Workout>(res, 'No pudimos agregar el ejercicio.');
 }
@@ -155,10 +159,11 @@ export async function removeExercise(
 export async function addSet(
   id: string,
   workoutExerciseId: string,
+  ids?: { id?: string },
 ): Promise<Workout> {
   const res = await apiFetch(
     `/api/workouts/${id}/exercises/${workoutExerciseId}/sets`,
-    { method: 'POST', body: JSON.stringify({}) },
+    { method: 'POST', body: JSON.stringify(ids ?? {}) },
   );
   return json<Workout>(res, 'No pudimos agregar la serie.');
 }

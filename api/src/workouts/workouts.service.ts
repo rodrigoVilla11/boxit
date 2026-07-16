@@ -57,8 +57,28 @@ export class WorkoutsService {
     });
   }
 
-  /** Devuelve el entreno activo si existe; si no, crea uno nuevo (un activo por vez). */
-  async create(userId: string): Promise<FullWorkout> {
+  /**
+   * Devuelve el entreno activo si existe; si no, crea uno nuevo (un activo por
+   * vez). Acepta un `id` del cliente (offline): si ya existe, es no-op idempotente;
+   * si no, se crea con ese id (salvo que ya haya otro activo, que se devuelve).
+   */
+  async create(userId: string, id?: string): Promise<FullWorkout> {
+    if (id) {
+      const existing = await this.prisma.workout.findUnique({ where: { id } });
+      if (existing) {
+        if (existing.userId !== userId) {
+          throw new NotFoundException('Entreno no encontrado.');
+        }
+        return this.findFull(id); // replay → no-op
+      }
+      const active = await this.prisma.workout.findFirst({
+        where: { userId, finishedAt: null },
+        orderBy: { startedAt: 'desc' },
+      });
+      if (active) return this.findFull(active.id);
+      const created = await this.prisma.workout.create({ data: { id, userId } });
+      return this.findFull(created.id);
+    }
     const existing = await this.prisma.workout.findFirst({
       where: { userId, finishedAt: null },
       orderBy: { startedAt: 'desc' },
@@ -288,6 +308,21 @@ export class WorkoutsService {
     dto: AddExerciseDto,
   ): Promise<FullWorkout> {
     await this.assertActive(userId, workoutId);
+
+    // idempotencia offline: si el WorkoutExercise ya existe, no-op
+    if (dto.id) {
+      const existing = await this.prisma.workoutExercise.findUnique({
+        where: { id: dto.id },
+        select: { workoutId: true },
+      });
+      if (existing) {
+        if (existing.workoutId !== workoutId) {
+          throw new BadRequestException('Ejercicio del entreno no encontrado.');
+        }
+        return this.findFull(workoutId);
+      }
+    }
+
     const exercise = await this.prisma.exercise.findUnique({
       where: { id: dto.exerciseId },
     });
@@ -296,11 +331,22 @@ export class WorkoutsService {
     const order = await this.nextExerciseOrder(workoutId);
     await this.prisma.workoutExercise.create({
       data: {
+        ...(dto.id ? { id: dto.id } : {}),
         workoutId,
         exerciseId: dto.exerciseId,
         order,
         // Arranca con una serie de trabajo vacía, lista para editar
-        sets: { create: [{ order: 1, type: 'NORMAL', weight: 0, reps: 0 }] },
+        sets: {
+          create: [
+            {
+              ...(dto.setId ? { id: dto.setId } : {}),
+              order: 1,
+              type: 'NORMAL',
+              weight: 0,
+              reps: 0,
+            },
+          ],
+        },
       },
     });
     return this.findFull(workoutId);
@@ -326,9 +372,19 @@ export class WorkoutsService {
     await this.assertActive(userId, workoutId);
     await this.assertWorkoutExercise(workoutId, workoutExerciseId);
 
+    // idempotencia offline: si la serie ya existe, no-op
+    if (dto.id) {
+      const existing = await this.prisma.workoutSet.findUnique({
+        where: { id: dto.id },
+        select: { id: true },
+      });
+      if (existing) return this.findFull(workoutId);
+    }
+
     const order = await this.nextSetOrder(workoutExerciseId);
     await this.prisma.workoutSet.create({
       data: {
+        ...(dto.id ? { id: dto.id } : {}),
         workoutExerciseId,
         order,
         type: dto.type ?? 'NORMAL',
