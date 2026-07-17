@@ -5,6 +5,7 @@ import { BodyDiagram } from './body-diagram';
 import { VideoPlayer } from './video-player';
 import { highlightColor } from '@/lib/muscle-color';
 import { equipmentLabel, muscleLabel } from '@/lib/labels';
+import { useLockBody } from '@/hooks/use-lock-body';
 import type { MuscleKey } from '@/lib/progress';
 import type { Exercise } from '@/lib/workouts';
 
@@ -19,6 +20,7 @@ export function ExerciseDetail({
   onEdit?: (e: Exercise) => void;
   onDelete?: (e: Exercise) => void;
 }) {
+  useLockBody(!!exercise);
   if (!exercise) return null;
 
   const secondary = new Set(exercise.secondaryMuscles);
@@ -30,7 +32,12 @@ export function ExerciseDetail({
         : highlightColor('none');
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={exercise.name}
+      className="animate-sheet-in fixed inset-0 z-[60] flex flex-col bg-ink"
+    >
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-2 pt-4">
           <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-text">
@@ -71,7 +78,7 @@ export function ExerciseDetail({
         </p>
       </header>
 
-      <div className="app-shell w-full flex-1 space-y-4 overflow-y-auto px-4 pb-safe pt-4">
+      <div className="app-shell w-full flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-safe pt-4">
         <div className="flex items-start justify-center gap-4 rounded-2xl bg-surface p-4">
           <BodyDiagram view="front" colorFor={colorFor} label="Frente" />
           <BodyDiagram view="back" colorFor={colorFor} label="Espalda" />

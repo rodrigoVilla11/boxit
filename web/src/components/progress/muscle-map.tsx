@@ -42,7 +42,7 @@ export function MuscleMap() {
 
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-card">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-base font-semibold text-text">Músculos</h2>
         <div className="flex gap-1 rounded-lg bg-surfaceRaised p-0.5">
           {RANGES.map((d) => (

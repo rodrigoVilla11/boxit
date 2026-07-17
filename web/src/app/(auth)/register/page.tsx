@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
+import { PasswordField } from '@/components/ui/password-field';
 import { register } from '@/lib/auth';
 
 export default function RegisterPage() {
@@ -37,13 +38,14 @@ export default function RegisterPage() {
         <h1 className="font-display text-xl font-semibold text-text">
           Creá tu cuenta
         </h1>
-        <p className="text-sm text-textMuted">Empezá a trackear tus entrenos hoy.</p>
+        <p className="text-sm text-textMuted">Empezá a registrar tus entrenos hoy.</p>
       </header>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <TextField
           label="Nombre"
           type="text"
+          enterKeyHint="next"
           autoComplete="name"
           placeholder="Tu nombre"
           value={name}
@@ -54,23 +56,32 @@ export default function RegisterPage() {
           label="Email"
           type="email"
           inputMode="email"
+          enterKeyHint="next"
           autoComplete="email"
           placeholder="vos@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <TextField
+        <PasswordField
           label="Contraseña"
-          type="password"
+          enterKeyHint="go"
           autoComplete="new-password"
           placeholder="Mínimo 8 caracteres"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <Button type="submit" loading={loading}>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <Button
+          type="submit"
+          loading={loading}
+          disabled={!name.trim() || !email.trim() || password.length < 8}
+        >
           Crear cuenta
         </Button>
       </form>

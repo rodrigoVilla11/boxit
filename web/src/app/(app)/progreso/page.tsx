@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { CalendarHeatmap } from '@/components/progress/calendar-heatmap';
 import { LifetimeStats } from '@/components/progress/lifetime-stats';
 import { MuscleMap } from '@/components/progress/muscle-map';
 import { BodyweightChart } from '@/components/progress/bodyweight-chart';
 import { VolumeChart, type VolumePoint } from '@/components/progress/volume-chart';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   ExerciseProgress,
   type ExerciseOption,
@@ -15,8 +17,10 @@ import { getHistory } from '@/lib/workouts';
 export default function ProgresoPage() {
   const [volume, setVolume] = useState<VolumePoint[]>([]);
   const [exercises, setExercises] = useState<ExerciseOption[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setStatus('loading');
     getHistory()
       .then((h) => {
         setVolume(
@@ -36,9 +40,14 @@ export default function ProgresoPage() {
             .map(([exerciseId, exerciseName]) => ({ exerciseId, exerciseName }))
             .sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'es')),
         );
+        setStatus('ready');
       })
-      .catch(() => {});
+      .catch(() => setStatus('error'));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -46,14 +55,22 @@ export default function ProgresoPage() {
         <h1 className="pt-6 font-display text-2xl font-bold text-text">Progreso</h1>
       </header>
 
-      <div className="mt-4 space-y-3">
-        <CalendarHeatmap />
-        <LifetimeStats />
-        <MuscleMap />
-        <BodyweightChart />
-        <VolumeChart points={volume} />
-        {exercises.length > 0 && <ExerciseProgress exercises={exercises} />}
-      </div>
+      {status === 'error' ? (
+        <ErrorState message="No pudimos cargar tu progreso." onRetry={load} />
+      ) : status === 'loading' ? (
+        <div className="flex justify-center py-16 text-textMuted">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <CalendarHeatmap />
+          <LifetimeStats />
+          <MuscleMap />
+          <BodyweightChart />
+          <VolumeChart points={volume} />
+          {exercises.length > 0 && <ExerciseProgress exercises={exercises} />}
+        </div>
+      )}
     </div>
   );
 }

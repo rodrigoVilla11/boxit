@@ -7,6 +7,7 @@ import { equipmentLabel, muscleLabel } from '@/lib/labels';
 import { ExerciseDetail } from '@/components/progress/exercise-detail';
 import { ExerciseForm } from '@/components/progress/exercise-form';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useLockBody } from '@/hooks/use-lock-body';
 
 const normalize = (s: string): string =>
   s
@@ -33,6 +34,8 @@ export function ExercisePicker({
   const [formInitial, setFormInitial] = useState<Exercise | null>(null);
   const [toDelete, setToDelete] = useState<Exercise | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  useLockBody(open);
 
   function reload() {
     getExercises().then(setItems).catch(() => {});
@@ -86,7 +89,12 @@ export function ExercisePicker({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-ink">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Agregar ejercicio"
+      className="animate-sheet-in fixed inset-0 z-[60] flex flex-col bg-ink"
+    >
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-3 pt-4">
           <h2 className="flex-1 font-display text-lg font-semibold text-text">
@@ -105,22 +113,27 @@ export function ExercisePicker({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textMuted" />
           <input
             autoFocus
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            autoCorrect="off"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar ejercicio o músculo…"
-            className="h-11 w-full rounded-2xl bg-surfaceRaised pl-9 pr-4 text-base text-text outline-none ring-1 ring-white/5 placeholder:text-textMuted/50 focus:ring-2 focus:ring-primary"
+            aria-label="Buscar ejercicio o músculo"
+            className="h-11 w-full rounded-2xl bg-surfaceRaised pl-9 pr-4 text-base text-text outline-none ring-1 ring-white/5 placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
           />
         </div>
       </header>
 
-      <div className="app-shell w-full flex-1 overflow-y-auto px-4 pb-safe pt-3">
+      <div className="app-shell w-full flex-1 overflow-y-auto overscroll-contain px-4 pb-safe pt-3">
         <button
           type="button"
           onClick={() => {
             setFormInitial(null);
             setFormOpen(true);
           }}
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 py-2.5 font-semibold text-primary transition hover:bg-primary/15"
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/15 py-2.5 font-semibold text-primary transition hover:bg-primary/25 active:scale-[0.99]"
         >
           <Plus className="h-5 w-5" />
           Crear ejercicio

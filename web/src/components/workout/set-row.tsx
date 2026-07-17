@@ -24,7 +24,7 @@ const RPE_OPTIONS = [6, 7, 8, 9, 10];
 
 const parseFloatSafe = (s: string): number => {
   const n = parseFloat(s.replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 };
 const parseIntSafe = (s: string): number => {
   const n = parseInt(s, 10);
@@ -75,18 +75,29 @@ export function SetRow({
   const weightStep = unit === 'LB' ? 5 : 2.5;
 
   // El input está en la unidad de display; guardamos siempre en kg.
-  const persist = () =>
-    onSave(set.id, {
-      weight: displayToKg(parseFloatSafe(weight), unit),
-      reps: parseIntSafe(reps),
-    });
+  // Comparamos en base kg para no reescribir (ni acumular drift kg/lb) si no cambió.
+  const draft = () => ({
+    kg: displayToKg(parseFloatSafe(weight), unit),
+    reps: parseIntSafe(reps),
+  });
+  const unchanged = (d: { kg: number; reps: number }) =>
+    Math.abs(d.kg - set.weight) < 1e-4 && d.reps === set.reps;
 
-  const toggleComplete = () =>
-    onSave(set.id, {
-      completed: !set.completed,
-      weight: displayToKg(parseFloatSafe(weight), unit),
-      reps: parseIntSafe(reps),
-    });
+  const persist = () => {
+    const d = draft();
+    if (unchanged(d)) return;
+    onSave(set.id, { weight: d.kg, reps: d.reps });
+  };
+
+  const toggleComplete = () => {
+    const d = draft();
+    onSave(
+      set.id,
+      unchanged(d)
+        ? { completed: !set.completed }
+        : { completed: !set.completed, weight: d.kg, reps: d.reps },
+    );
+  };
 
   const stepWeight = (delta: number) => {
     const next = Math.max(0, roundDisplay(parseFloatSafe(weight) + delta));
@@ -122,14 +133,14 @@ export function SetRow({
 
   return (
     <div className={cn('rounded-xl transition-colors', set.completed && 'row-done')}>
-      <div className="grid grid-cols-[2rem_1fr_4.75rem_3.75rem_2.5rem] items-center gap-2 px-2 py-1.5">
+      <div className="grid grid-cols-[2.25rem_1fr_5rem_4rem_2.75rem] items-center gap-2 px-2 py-1.5">
         <Menu
           align="left"
           label="Opciones de la serie"
           trigger={
             <span
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold',
+                'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold',
                 isWarmup
                   ? 'bg-accentLime/15 text-accentLime'
                   : 'bg-surfaceRaised text-textMuted',
@@ -149,7 +160,7 @@ export function SetRow({
           </MenuItem>
           <MenuItem onClick={() => onToggleWarmup(set.id, !isWarmup)}>
             <Flame className="h-4 w-4" />
-            {isWarmup ? 'Volver a normal' : 'Convertir en warmup'}
+            {isWarmup ? 'Volver a serie normal' : 'Convertir en calentamiento'}
           </MenuItem>
           {onMoveUp && (
             <MenuItem onClick={onMoveUp}>
@@ -210,7 +221,7 @@ export function SetRow({
           aria-label={set.completed ? 'Desmarcar serie' : 'Completar serie'}
           aria-pressed={set.completed}
           className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-lg transition',
+            'flex h-11 w-11 items-center justify-center rounded-lg transition active:scale-95',
             set.completed
               ? 'bg-primary text-ink'
               : 'bg-surfaceRaised text-textMuted hover:text-text',
@@ -256,9 +267,10 @@ export function SetRow({
                 key={v}
                 type="button"
                 onClick={() => setRpe(v)}
+                aria-label={`RPE ${v}`}
                 aria-pressed={set.rpe === v}
                 className={cn(
-                  'h-7 w-7 rounded-lg text-xs font-semibold transition',
+                  'h-8 w-8 rounded-lg text-xs font-semibold transition active:scale-95',
                   set.rpe === v
                     ? 'bg-accentLime text-ink'
                     : 'bg-surfaceRaised text-textMuted hover:text-text',
@@ -273,8 +285,9 @@ export function SetRow({
             onChange={(e) => setNote(e.target.value)}
             onBlur={() => onSave(set.id, { note: note.trim() || null })}
             placeholder="Nota de la serie…"
+            aria-label="Nota de la serie"
             maxLength={280}
-            className="h-9 w-full rounded-lg bg-surfaceRaised px-3 text-sm text-text outline-none placeholder:text-textMuted/50 focus:ring-2 focus:ring-primary"
+            className="h-10 w-full rounded-lg bg-surfaceRaised px-3 text-sm text-text outline-none placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
           />
         </div>
       )}
@@ -311,31 +324,33 @@ function Spinner({
     <div className="relative">
       <input
         inputMode={inputMode}
+        enterKeyHint="done"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
         onBlur={onBlur}
         aria-label={ariaLabel}
-        className="h-9 w-full rounded-lg bg-surfaceRaised pl-1.5 pr-5 text-center text-sm text-text outline-none focus:ring-2 focus:ring-primary"
+        className="h-11 w-full rounded-lg bg-surfaceRaised pl-1.5 pr-6 text-center text-sm text-text outline-none focus:ring-2 focus:ring-primary"
       />
-      <div className="absolute inset-y-0 right-0 flex w-5 flex-col border-l border-white/5">
+      <div className="absolute inset-y-0 right-0 flex w-6 flex-col border-l border-white/5">
         <button
           type="button"
           tabIndex={-1}
           aria-label="Sumar"
           onClick={() => onStep(1)}
-          className="flex h-1/2 items-center justify-center text-textMuted transition active:text-primary"
+          className="flex h-1/2 items-center justify-center text-textMuted transition active:scale-90 active:text-primary"
         >
-          <ChevronUp className="h-3 w-3" strokeWidth={3} />
+          <ChevronUp className="h-3.5 w-3.5" strokeWidth={3} />
         </button>
         <button
           type="button"
           tabIndex={-1}
           aria-label="Restar"
           onClick={() => onStep(-1)}
-          className="flex h-1/2 items-center justify-center text-textMuted transition active:text-primary"
+          className="flex h-1/2 items-center justify-center text-textMuted transition active:scale-90 active:text-primary"
         >
-          <ChevronDown className="h-3 w-3" strokeWidth={3} />
+          <ChevronDown className="h-3.5 w-3.5" strokeWidth={3} />
         </button>
       </div>
     </div>

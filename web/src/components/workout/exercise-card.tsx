@@ -93,7 +93,7 @@ export function ExerciseCard({
       </header>
 
       {/* Encabezado de columnas */}
-      <div className="grid grid-cols-[2rem_1fr_4.75rem_3.75rem_2.5rem] gap-2 px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-textMuted">
+      <div className="grid grid-cols-[2.25rem_1fr_5rem_4rem_2.75rem] gap-2 px-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-textMuted">
         <span>Serie</span>
         <span>Anterior</span>
         <span className="text-center">{unitLabel(unit)}</span>
@@ -123,7 +123,7 @@ export function ExerciseCard({
       <button
         type="button"
         onClick={() => onAddSet(we.id)}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-surfaceRaised py-2 text-sm font-medium text-textMuted transition hover:text-text"
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-surfaceRaised py-2.5 text-sm font-medium text-textMuted transition hover:text-text active:scale-[0.99]"
       >
         <Plus className="h-4 w-4" />
         Agregar serie

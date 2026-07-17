@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Check,
@@ -13,9 +13,10 @@ import {
 import { cn } from '@/lib/cn';
 import { muscleLabel } from '@/lib/labels';
 import { formatDuration, formatSessionDate } from '@/lib/format';
-import { formatVolume, kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
+import { formatVolume, unitLabel, weightValue } from '@/lib/units';
 import { useUnit } from '@/components/unit-provider';
 import { useToast } from '@/components/toast-provider';
+import { ErrorState } from '@/components/ui/error-state';
 import { createRoutine } from '@/lib/routines';
 import {
   getPersonalRecords,
@@ -33,8 +34,21 @@ export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [prByExercise, setPrByExercise] = useState<Record<string, PersonalRecord>>({});
-  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState<null | 'repeat' | 'routine'>(null);
+
+  const load = useCallback(() => {
+    setLoadError(false);
+    setWorkout(null);
+    getWorkoutById(id)
+      .then(setWorkout)
+      .catch(() => setLoadError(true));
+    getPersonalRecords()
+      .then((prs) =>
+        setPrByExercise(Object.fromEntries(prs.map((p) => [p.exerciseId, p]))),
+      )
+      .catch(() => {});
+  }, [id]);
 
   async function onRepeat() {
     if (busy) return;
@@ -74,15 +88,8 @@ export default function SessionDetailPage() {
   }
 
   useEffect(() => {
-    getWorkoutById(id)
-      .then(setWorkout)
-      .catch(() => setNotFound(true));
-    getPersonalRecords()
-      .then((prs) =>
-        setPrByExercise(Object.fromEntries(prs.map((p) => [p.exerciseId, p]))),
-      )
-      .catch(() => {});
-  }, [id]);
+    load();
+  }, [load]);
 
   const isPrSet = (record: PersonalRecord | undefined, set: WorkoutSet): boolean => {
     if (!record || !set.completed || set.type !== 'NORMAL') return false;
@@ -91,11 +98,14 @@ export default function SessionDetailPage() {
       : set.weight === 0 && set.reps === record.reps;
   };
 
-  if (notFound) {
+  if (loadError) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 pb-16 text-center">
-        <p className="text-sm text-textMuted">No encontramos este entreno.</p>
-        <button onClick={() => router.push('/historial')} className="font-semibold text-primary">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 pb-16 text-center">
+        <ErrorState message="No pudimos cargar este entreno." onRetry={load} />
+        <button
+          onClick={() => router.push('/historial')}
+          className="text-sm font-semibold text-textMuted transition hover:text-text"
+        >
           Volver al historial
         </button>
       </div>
@@ -223,7 +233,7 @@ function DetailSetRow({
         {set.weight > 0 ? (
           <>
             <span className="font-semibold tabular-nums">
-              {roundDisplay(kgToDisplay(set.weight, unit))}
+              {weightValue(set.weight, unit)}
             </span>
             <span className="text-textMuted"> {unitLabel(unit)} × </span>
             <span className="font-semibold tabular-nums">{set.reps}</span>
@@ -231,7 +241,7 @@ function DetailSetRow({
         ) : (
           <>
             <span className="font-semibold tabular-nums">{set.reps}</span>
-            <span className="text-textMuted"> reps</span>
+            <span className="text-textMuted"> {set.reps === 1 ? 'rep' : 'reps'}</span>
           </>
         )}
       </span>

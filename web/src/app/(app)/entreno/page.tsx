@@ -52,6 +52,10 @@ export default function EntrenoPage() {
   const [summary, setSummary] = useState<Workout | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [removeExId, setRemoveExId] = useState<string | null>(null);
+
+  const removeExName = wo.workout?.exercises.find((e) => e.id === removeExId)
+    ?.exercise.name;
 
   // Sensor con umbral chico: el arrastre sólo se activa desde el grip
   const sensors = useSensors(
@@ -127,9 +131,9 @@ export default function EntrenoPage() {
   }
 
   async function onDiscard() {
-    setConfirmDiscard(false);
     rest.skip();
     await wo.discard();
+    setConfirmDiscard(false);
   }
 
   async function onLogout() {
@@ -220,7 +224,7 @@ export default function EntrenoPage() {
                     onToggleWarmup={(setId, warmup) =>
                       wo.saveSet(setId, { type: warmup ? 'WARMUP' : 'NORMAL' })
                     }
-                    onRemoveExercise={wo.removeExercise}
+                    onRemoveExercise={setRemoveExId}
                     onReorderSets={wo.reorderSets}
                   />
                 ))}
@@ -238,8 +242,6 @@ export default function EntrenoPage() {
           Agregar ejercicio
         </button>
 
-        {/* espacio para que el rest timer no tape el último contenido */}
-        {rest.active && <div className="h-16" aria-hidden />}
       </div>
 
       <ExercisePicker
@@ -258,6 +260,19 @@ export default function EntrenoPage() {
         danger
         onConfirm={onDiscard}
         onCancel={() => setConfirmDiscard(false)}
+      />
+
+      <ConfirmDialog
+        open={removeExId !== null}
+        title="¿Quitar ejercicio?"
+        message={`Se van a borrar las series cargadas de ${removeExName ?? 'este ejercicio'}.`}
+        confirmLabel="Quitar"
+        danger
+        onConfirm={async () => {
+          if (removeExId) await wo.removeExercise(removeExId);
+          setRemoveExId(null);
+        }}
+        onCancel={() => setRemoveExId(null)}
       />
     </div>
   );

@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import { Globe, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { getMe } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
+import { SwitchVisual } from '@/components/ui/switch';
+import { useLockBody } from '@/hooks/use-lock-body';
 import {
   EQUIPMENT_KEYS,
   MUSCLE_KEYS,
@@ -40,6 +43,8 @@ export function ExerciseForm({
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [global, setGlobal] = useState(true);
+
+  useLockBody(true);
 
   useEffect(() => {
     getMe()
@@ -82,7 +87,12 @@ export function ExerciseForm({
     'h-11 w-full appearance-none rounded-2xl bg-surfaceRaised px-4 text-base text-text outline-none ring-1 ring-white/5 focus:ring-2 focus:ring-primary';
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-ink">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={editing ? 'Editar ejercicio' : 'Nuevo ejercicio'}
+      className="animate-sheet-in fixed inset-0 z-[60] flex flex-col bg-ink"
+    >
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-3 pt-4">
           <h2 className="flex-1 font-display text-lg font-semibold text-text">
@@ -99,13 +109,14 @@ export function ExerciseForm({
         </div>
       </header>
 
-      <div className="app-shell w-full flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-4">
+      <div className="app-shell w-full flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-6 pt-4">
         <TextField
           label="Nombre"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Ej: Press Arnold"
           maxLength={60}
+          autoFocus={!editing}
         />
 
         <div>
@@ -137,8 +148,9 @@ export function ExerciseForm({
                   key={m}
                   type="button"
                   onClick={() => toggleSecondary(m)}
+                  aria-pressed={on}
                   className={cn(
-                    'rounded-full px-3 py-1.5 text-sm transition',
+                    'rounded-full px-3 py-1.5 text-sm transition active:scale-95',
                     on
                       ? 'bg-primary/20 text-primary ring-1 ring-primary/40'
                       : 'bg-surfaceRaised text-textMuted hover:text-text',
@@ -178,7 +190,7 @@ export function ExerciseForm({
             placeholder="Cómo se hace, tips de técnica…"
             rows={4}
             maxLength={600}
-            className="w-full rounded-2xl bg-surfaceRaised px-4 py-3 text-base text-text outline-none ring-1 ring-white/5 placeholder:text-textMuted/50 focus:ring-2 focus:ring-primary"
+            className="w-full rounded-2xl bg-surfaceRaised px-4 py-3 text-base text-text outline-none ring-1 ring-white/5 placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
           />
         </div>
 
@@ -195,7 +207,8 @@ export function ExerciseForm({
           <button
             type="button"
             onClick={() => setGlobal((g) => !g)}
-            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+            aria-pressed={global}
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99]"
           >
             <Globe className="h-5 w-5 shrink-0 text-primary" />
             <span className="min-w-0 flex-1">
@@ -206,32 +219,19 @@ export function ExerciseForm({
                 Como admin, se agrega a la librería de todos los usuarios.
               </span>
             </span>
-            <span
-              className={cn(
-                'relative h-6 w-10 shrink-0 rounded-full transition',
-                global ? 'bg-primary' : 'bg-surfaceRaised',
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all',
-                  global ? 'left-[1.125rem]' : 'left-0.5',
-                )}
-              />
-            </span>
+            <SwitchVisual on={global} />
           </button>
         )}
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={!canSave}
-          className="h-12 w-full rounded-2xl bg-primary text-base font-semibold text-ink transition hover:bg-primary-deep disabled:opacity-40"
-        >
-          {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear ejercicio'}
-        </button>
+        <Button onClick={save} loading={saving} disabled={!canSave}>
+          {editing ? 'Guardar cambios' : 'Crear ejercicio'}
+        </Button>
       </div>
     </div>
   );

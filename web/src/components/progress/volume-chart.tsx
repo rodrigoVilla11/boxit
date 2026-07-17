@@ -25,20 +25,24 @@ export function VolumeChart({ points }: { points: VolumePoint[] }) {
   const data = points.slice(-12); // últimas 12 sesiones, cronológico
   const [sel, setSel] = useState<number | null>(null);
 
-  if (data.length === 0) {
+  const realMax = data.length ? Math.max(0, ...data.map((d) => d.volume)) : 0;
+
+  if (data.length === 0 || realMax === 0) {
     return (
       <section className="rounded-2xl bg-surface p-4 shadow-card">
         <h2 className="font-display text-base font-semibold text-text">
           Volumen por sesión
         </h2>
         <p className="py-6 text-center text-sm text-textMuted">
-          Sin entrenos todavía.
+          {data.length === 0
+            ? 'Sin entrenos todavía.'
+            : 'Sin volumen con carga en estas sesiones.'}
         </p>
       </section>
     );
   }
 
-  const maxV = Math.max(...data.map((d) => d.volume), 1);
+  const maxV = realMax;
   const slot = (W - PAD_X * 2) / data.length;
   const barW = Math.min(30, slot * 0.62);
   const idx = sel !== null && sel >= 0 && sel < data.length ? sel : data.length - 1;

@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, MoreVertical, Timer, Trash2 } from 'lucide-react';
+import { Loader2, LogOut, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { useNow } from '@/hooks/use-now';
 import { useUnit } from '@/components/unit-provider';
@@ -40,8 +40,9 @@ export function WorkoutHeader({
             type="button"
             onClick={onFinish}
             disabled={finishing}
-            className="h-9 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep disabled:opacity-60"
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95 disabled:opacity-60"
           >
+            {finishing && <Loader2 className="h-4 w-4 animate-spin" />}
             Terminar
           </button>
           <Menu
@@ -64,8 +65,7 @@ export function WorkoutHeader({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <Metric label="Duración" value={formatDuration(elapsed)} />
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <Metric label="Volumen" value={formatVolume(totals.volume, unit)} />
         <Metric label="Series" value={String(totals.sets)} />
       </div>

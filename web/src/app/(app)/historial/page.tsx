@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Dumbbell, History, Loader2, Settings, Timer, Trophy } from 'lucide-react';
 import { formatDuration, formatSessionDate } from '@/lib/format';
 import { formatVolume, formatWeight } from '@/lib/units';
+import { plural } from '@/lib/plural';
 import { useUnit } from '@/components/unit-provider';
+import { ErrorState } from '@/components/ui/error-state';
 import {
   getHistory,
   getPersonalRecords,
@@ -16,15 +18,22 @@ import {
 export default function HistorialPage() {
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setError(false);
+    setWorkouts(null);
     getHistory()
       .then(setWorkouts)
-      .catch(() => setWorkouts([]));
+      .catch(() => setError(true));
     getPersonalRecords()
       .then(setPrs)
-      .catch(() => setPrs([]));
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -39,7 +48,9 @@ export default function HistorialPage() {
         </Link>
       </header>
 
-      {workouts === null ? (
+      {error ? (
+        <ErrorState message="No pudimos cargar tu historial." onRetry={load} />
+      ) : workouts === null ? (
         <div className="flex justify-center py-16 text-textMuted">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
@@ -51,7 +62,7 @@ export default function HistorialPage() {
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-textMuted">
-              {workouts.length} {workouts.length === 1 ? 'entreno' : 'entrenos'}
+              {plural(workouts.length, 'entreno', 'entrenos')}
             </h2>
             {workouts.map((w) => (
               <SessionCard key={w.id} workout={w} />
@@ -115,7 +126,7 @@ function SessionCard({ workout }: { workout: WorkoutSummary }) {
             <Timer className="h-3.5 w-3.5" />
             {formatDuration(workout.durationSec)}
           </span>
-          <span>{workout.totalSets} series</span>
+          <span>{plural(workout.totalSets, 'serie', 'series')}</span>
         </div>
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-textMuted" />

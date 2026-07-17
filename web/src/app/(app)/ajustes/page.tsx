@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   Download,
   KeyRound,
+  Loader2,
   LogOut,
   Minus,
   Pencil,
@@ -18,7 +19,9 @@ import {
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
+import { PasswordField } from '@/components/ui/password-field';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SwitchVisual } from '@/components/ui/switch';
 import { useUnit } from '@/components/unit-provider';
 import { usePreferences } from '@/components/preferences-provider';
 import { useToast } from '@/components/toast-provider';
@@ -57,7 +60,7 @@ export default function AjustesPage() {
   const [newPw, setNewPw] = useState('');
   const [savingPw, setSavingPw] = useState(false);
 
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'json' | 'csv' | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -106,13 +109,14 @@ export default function AjustesPage() {
   }
 
   async function doExport(kind: 'json' | 'csv') {
-    setExporting(true);
+    if (exporting) return;
+    setExporting(kind);
     try {
       await (kind === 'json' ? exportJson() : exportCsv());
     } catch {
       toast.error('No pudimos exportar tus datos.');
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -149,7 +153,9 @@ export default function AjustesPage() {
       </header>
 
       {/* Cuenta */}
-      {user && (
+      {user === null ? (
+        <div className="mt-5 h-[4.75rem] animate-pulse rounded-2xl bg-surface" />
+      ) : (
         <div className="mt-5 rounded-2xl bg-surface p-4 shadow-card">
           {editingName ? (
             <div className="flex items-end gap-2">
@@ -158,6 +164,10 @@ export default function AjustesPage() {
                   label="Nombre"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !savingName) saveName();
+                  }}
+                  enterKeyHint="done"
                   maxLength={60}
                   autoFocus
                 />
@@ -167,15 +177,21 @@ export default function AjustesPage() {
                 onClick={saveName}
                 disabled={savingName}
                 aria-label="Guardar nombre"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-ink disabled:opacity-40"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-ink transition active:scale-95 disabled:opacity-60"
               >
-                <Check className="h-5 w-5" strokeWidth={3} />
+                {savingName ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Check className="h-5 w-5" strokeWidth={3} />
+                )}
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-display font-semibold text-text">{user.name}</p>
+                <p className="truncate font-display font-semibold text-text">
+                  {user.name}
+                </p>
                 <p className="truncate text-sm text-textMuted">{user.email}</p>
               </div>
               <button
@@ -185,7 +201,7 @@ export default function AjustesPage() {
                   setEditingName(true);
                 }}
                 aria-label="Editar nombre"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-textMuted hover:text-text"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-textMuted transition hover:text-text active:scale-95"
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -275,16 +291,14 @@ export default function AjustesPage() {
         <div className="space-y-2">
           {pwOpen ? (
             <div className="space-y-3 rounded-2xl bg-surface p-4">
-              <TextField
+              <PasswordField
                 label="Contraseña actual"
-                type="password"
                 value={curPw}
                 onChange={(e) => setCurPw(e.target.value)}
                 autoComplete="current-password"
               />
-              <TextField
+              <PasswordField
                 label="Nueva contraseña"
-                type="password"
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
@@ -298,7 +312,7 @@ export default function AjustesPage() {
                     setCurPw('');
                     setNewPw('');
                   }}
-                  className="h-11 flex-1 rounded-2xl bg-surfaceRaised text-sm font-semibold text-textMuted"
+                  className="h-11 flex-1 rounded-2xl bg-surfaceRaised text-sm font-semibold text-textMuted transition active:scale-[0.98]"
                 >
                   Cancelar
                 </button>
@@ -306,8 +320,9 @@ export default function AjustesPage() {
                   type="button"
                   onClick={savePassword}
                   disabled={savingPw || newPw.length < 8 || !curPw}
-                  className="h-11 flex-1 rounded-2xl bg-primary text-sm font-semibold text-ink disabled:opacity-40"
+                  className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-primary text-sm font-semibold text-ink transition active:scale-[0.98] disabled:opacity-60"
                 >
+                  {savingPw && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingPw ? 'Guardando…' : 'Guardar'}
                 </button>
               </div>
@@ -316,7 +331,7 @@ export default function AjustesPage() {
             <button
               type="button"
               onClick={() => setPwOpen(true)}
-              className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+              className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99]"
             >
               <KeyRound className="h-5 w-5 shrink-0 text-primary" />
               <span className="flex-1 text-sm font-medium text-text">
@@ -329,19 +344,27 @@ export default function AjustesPage() {
             <button
               type="button"
               onClick={() => doExport('json')}
-              disabled={exporting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text disabled:opacity-40"
+              disabled={exporting !== null}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text transition active:scale-[0.99] disabled:opacity-60"
             >
-              <Download className="h-4 w-4" />
+              {exporting === 'json' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               Exportar JSON
             </button>
             <button
               type="button"
               onClick={() => doExport('csv')}
-              disabled={exporting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text disabled:opacity-40"
+              disabled={exporting !== null}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text transition active:scale-[0.99] disabled:opacity-60"
             >
-              <Download className="h-4 w-4" />
+              {exporting === 'csv' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               Exportar CSV
             </button>
           </div>
@@ -349,7 +372,7 @@ export default function AjustesPage() {
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99]"
           >
             <Trash2 className="h-5 w-5 shrink-0 text-danger" />
             <span className="flex-1 text-sm font-medium text-danger">
@@ -397,26 +420,14 @@ function ToggleRow({
       type="button"
       onClick={onToggle}
       aria-pressed={on}
-      className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface p-3 text-left transition active:scale-[0.99]"
     >
       {icon}
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-text">{title}</span>
         <span className="block text-xs text-textMuted">{subtitle}</span>
       </span>
-      <span
-        className={cn(
-          'relative h-6 w-10 shrink-0 rounded-full transition',
-          on ? 'bg-primary' : 'bg-surfaceRaised',
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all',
-            on ? 'left-[1.125rem]' : 'left-0.5',
-          )}
-        />
-      </span>
+      <SwitchVisual on={on} />
     </button>
   );
 }

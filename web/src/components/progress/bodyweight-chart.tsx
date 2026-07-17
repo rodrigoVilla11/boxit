@@ -70,8 +70,12 @@ export function BodyweightChart() {
     latest && first ? roundDisplay(kgToDisplay(latest.weightKg - first.weightKg, unit)) : 0;
 
   async function add() {
+    if (saving) return;
     const v = parseFloat(input.replace(',', '.'));
-    if (!Number.isFinite(v) || v <= 0) return;
+    if (!Number.isFinite(v) || v <= 0) {
+      toast.error('Ingresá un peso válido.');
+      return;
+    }
     setSaving(true);
     try {
       const created = await createBodyweight({ weightKg: displayToKg(v, unit) });
@@ -139,7 +143,7 @@ export function BodyweightChart() {
                   <button
                     type="button"
                     onClick={removeSelected}
-                    className="inline-flex items-center gap-1 text-danger"
+                    className="-mr-2 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-danger transition active:scale-95"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Borrar
@@ -175,8 +179,21 @@ export function BodyweightChart() {
                   const isSel = i === idx;
                   const cy = geo.y(roundDisplay(kgToDisplay(r.weightKg, unit)));
                   return (
-                    <g key={r.id} onClick={() => setSel(i)} style={{ cursor: 'pointer' }}>
-                      <circle cx={geo.x(i)} cy={cy} r={9} fill="transparent" />
+                    <g
+                      key={r.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${roundDisplay(kgToDisplay(r.weightKg, unit))} ${unitLabel(unit)}, ${formatSessionDate(r.takenAt)}`}
+                      onClick={() => setSel(i)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSel(i);
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <circle cx={geo.x(i)} cy={cy} r={13} fill="transparent" />
                       <circle
                         cx={geo.x(i)}
                         cy={cy}
@@ -199,19 +216,25 @@ export function BodyweightChart() {
           <div className="mt-3 flex gap-2">
             <input
               inputMode="decimal"
+              enterKeyHint="done"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && add()}
+              onKeyDown={(e) => e.key === 'Enter' && !saving && add()}
               placeholder={`Tu peso en ${unitLabel(unit)}`}
-              className="h-11 flex-1 rounded-xl bg-surfaceRaised px-3 text-center text-sm text-text outline-none placeholder:text-textMuted/50 focus:ring-2 focus:ring-primary"
+              aria-label={`Tu peso en ${unitLabel(unit)}`}
+              className="h-11 flex-1 rounded-xl bg-surfaceRaised px-3 text-center text-sm text-text outline-none placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"
               onClick={add}
-              disabled={saving || !input}
-              className="flex h-11 items-center gap-1 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep disabled:opacity-40"
+              disabled={saving || !input.trim()}
+              className="flex h-11 items-center gap-1 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95 disabled:opacity-60"
             >
-              <Plus className="h-4 w-4" />
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Guardar
             </button>
           </div>

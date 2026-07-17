@@ -67,7 +67,10 @@ export function CalendarHeatmap() {
       w++;
     }
 
-    return { columns, streak, total: (history ?? []).length };
+    const total = columns
+      .flat()
+      .reduce((n, c) => n + (c.future ? 0 : c.count), 0);
+    return { columns, streak, total };
   }, [history]);
 
   return (

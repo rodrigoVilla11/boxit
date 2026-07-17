@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Dumbbell, Minus, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, Dumbbell, Loader2, Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
@@ -87,9 +87,10 @@ export function RoutineForm({
           type="button"
           onClick={save}
           disabled={!canSave}
-          className="mt-5 h-9 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep disabled:opacity-40"
+          className="mt-5 flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95 disabled:opacity-60"
         >
-          {submitLabel}
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? 'Guardando…' : submitLabel}
         </button>
       </header>
 
@@ -98,11 +99,19 @@ export function RoutineForm({
           label="Nombre de la rutina"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && canSave) save();
+          }}
+          enterKeyHint="done"
           placeholder="Ej: Push A, Pierna, Full body…"
           maxLength={60}
         />
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
 
         <div className="space-y-2">
           {items.map((it) => (
@@ -121,7 +130,7 @@ export function RoutineForm({
                   type="button"
                   onClick={() => setSets(it.key, -1)}
                   aria-label="Menos series"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-textMuted hover:text-text"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-textMuted transition hover:text-text active:scale-90"
                 >
                   <Minus className="h-4 w-4" />
                 </button>
@@ -133,7 +142,7 @@ export function RoutineForm({
                   type="button"
                   onClick={() => setSets(it.key, 1)}
                   aria-label="Más series"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-textMuted hover:text-text"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-textMuted transition hover:text-text active:scale-90"
                 >
                   <Plus className="h-4 w-4" />
                 </button>

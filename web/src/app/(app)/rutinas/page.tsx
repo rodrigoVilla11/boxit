@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ClipboardList, Loader2, MoreVertical, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ErrorState } from '@/components/ui/error-state';
+import { plural } from '@/lib/plural';
 import { deleteRoutine, getRoutines, startRoutine, type Routine } from '@/lib/routines';
 
 export default function RutinasPage() {
@@ -13,13 +15,20 @@ export default function RutinasPage() {
   const [routines, setRoutines] = useState<Routine[] | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [toDelete, setToDelete] = useState<Routine | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadError(false);
+    setRoutines(null);
     getRoutines()
       .then(setRoutines)
-      .catch(() => setRoutines([]));
+      .catch(() => setLoadError(true));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function onStart(routine: Routine) {
     setError(null);
@@ -69,7 +78,9 @@ export default function RutinasPage() {
       )}
 
       <div className="mt-4 flex-1 space-y-3">
-        {routines === null ? (
+        {loadError ? (
+          <ErrorState message="No pudimos cargar tus rutinas." onRetry={load} />
+        ) : routines === null ? (
           <div className="flex justify-center py-16 text-textMuted">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
@@ -148,7 +159,8 @@ function RoutineCard({
 
       <p className="mt-0.5 line-clamp-2 text-sm text-textMuted">{preview}</p>
       <p className="mt-2 text-xs text-textMuted">
-        {routine.exercises.length} ejercicios · {totalSets} series
+        {plural(routine.exercises.length, 'ejercicio', 'ejercicios')} ·{' '}
+        {plural(totalSets, 'serie', 'series')}
       </p>
 
       <button

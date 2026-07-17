@@ -17,6 +17,14 @@
     min-height: 100dvh;
   }
 
+  /* Foco visible por teclado en toda la app (WCAG 2.4.7). El mouse/touch no lo
+     muestra gracias a :focus-visible; los inputs conservan su ring propio. */
+  :where(a, button, [role='button'], [tabindex], summary):focus-visible {
+    outline: 2px solid theme('colors.primary.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
   /* La app es dark siempre; evitamos el flash de autofill claro */
   input:-webkit-autofill {
     -webkit-text-fill-color: #f0f4f2;
@@ -41,5 +49,37 @@
   /* Tint de serie completada (verde al 15%) */
   .row-done {
     background-color: color-mix(in srgb, theme('colors.primary.DEFAULT') 15%, transparent);
+  }
+
+  /* Entrada suave de sheets full-screen y diálogos (sin dependencias) */
+  @keyframes boxit-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes boxit-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .animate-sheet-in {
+    animation: boxit-sheet-in 0.18s ease-out;
+  }
+  .animate-fade-in {
+    animation: boxit-fade-in 0.15s ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-sheet-in,
+    .animate-fade-in {
+      animation: none;
+    }
   }
 }

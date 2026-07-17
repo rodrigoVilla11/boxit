@@ -19,7 +19,11 @@ export function TabBar() {
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/5 bg-surface/95 pb-safe backdrop-blur">
       <ul className="app-shell flex">
         {TABS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const active =
+            pathname === href ||
+            pathname.startsWith(`${href}/`) ||
+            // Ajustes se abre desde Historial y no tiene pestaña propia
+            (href === '/historial' && pathname === '/ajustes');
           return (
             <li key={href} className="flex-1">
               <Link

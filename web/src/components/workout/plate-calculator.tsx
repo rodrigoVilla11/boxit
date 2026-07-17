@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Minus, Plus, X } from 'lucide-react';
 import { useUnit } from '@/components/unit-provider';
+import { useLockBody } from '@/hooks/use-lock-body';
 import { cn } from '@/lib/cn';
 import {
   displayToKg,
@@ -23,6 +24,7 @@ export function PlateCalculator({
   onClose: () => void;
 }) {
   const { unit } = useUnit();
+  useLockBody(true);
   const step = unit === 'LB' ? 5 : 2.5;
   const barOptions = unit === 'LB' ? BAR_OPTIONS_LB : BAR_OPTIONS_KG;
 
@@ -47,7 +49,12 @@ export function PlateCalculator({
   const u = unitLabel(unit);
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-ink">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Calculadora de discos"
+      className="animate-sheet-in fixed inset-0 z-[60] flex flex-col bg-ink"
+    >
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-3 pt-4">
           <h2 className="flex-1 font-display text-lg font-semibold text-text">
@@ -64,7 +71,7 @@ export function PlateCalculator({
         </div>
       </header>
 
-      <div className="app-shell w-full flex-1 space-y-6 overflow-y-auto px-4 pb-8 pt-6">
+      <div className="app-shell w-full flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 pb-8 pt-6">
         {/* Peso objetivo */}
         <div>
           <label className="mb-2 block text-sm font-medium text-textMuted">
@@ -164,7 +171,7 @@ export function PlateCalculator({
             </div>
           )}
           {result.leftover > 0 && (
-            <p className="mt-3 text-xs text-accentLime">
+            <p className="mt-3 text-xs text-textMuted">
               No entra exacto: con estos discos armás{' '}
               {roundDisplay(result.achievable)} {u} (faltan{' '}
               {roundDisplay(result.leftover)} {u}).

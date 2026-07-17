@@ -1,18 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { RoutineForm, type RoutineDraftItem } from '@/components/routines/routine-form';
+import { ErrorState } from '@/components/ui/error-state';
 import { getRoutine, updateRoutine } from '@/lib/routines';
 
 export default function EditarRutinaPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [initial, setInitial] = useState<{ name: string; items: RoutineDraftItem[] } | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadError(false);
+    setInitial(null);
     getRoutine(id)
       .then((r) =>
         setInitial({
@@ -23,14 +26,21 @@ export default function EditarRutinaPage() {
           })),
         }),
       )
-      .catch(() => setNotFound(true));
+      .catch(() => setLoadError(true));
   }, [id]);
 
-  if (notFound) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loadError) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 pb-16 text-center">
-        <p className="text-sm text-textMuted">No encontramos esta rutina.</p>
-        <button onClick={() => router.push('/rutinas')} className="font-semibold text-primary">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 pb-16 text-center">
+        <ErrorState message="No pudimos cargar esta rutina." onRetry={load} />
+        <button
+          onClick={() => router.push('/rutinas')}
+          className="text-sm font-semibold text-textMuted transition hover:text-text"
+        >
           Volver a rutinas
         </button>
       </div>

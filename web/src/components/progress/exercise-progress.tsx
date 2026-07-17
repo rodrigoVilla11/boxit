@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUnit } from '@/components/unit-provider';
-import { kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
+import { kgToDisplay, roundDisplay, unitLabel, weightValue } from '@/lib/units';
 import { formatSessionDate } from '@/lib/format';
 import { epley1RM } from '@/lib/prs';
 import { getExerciseHistory, type ExerciseHistoryPoint } from '@/lib/progress';
@@ -43,22 +43,26 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
   }, [exId, days]);
 
   const metric = points && points.length ? points[0].metric : 'weight';
-  const e1rm = useE1rm && metric === 'weight';
+  // La métrica se calcula por sesión: sólo ofrecemos 1RM si toda la serie es con carga.
+  const homogeneous =
+    !!points && points.length > 0 && points.every((p) => p.metric === metric);
+  const e1rm = useE1rm && homogeneous && metric === 'weight';
 
   // valor "crudo" del punto (kg para peso; reps para peso corporal)
   const rawValue = (p: ExerciseHistoryPoint) =>
     e1rm ? epley1RM(p.value, p.reps) : p.value;
-  const toDisplay = (v: number) =>
-    metric === 'weight' ? roundDisplay(kgToDisplay(v, unit)) : v;
+  // Escala al display según la métrica DEL punto (evita mezclar kg y reps mal).
+  const toDisplay = (p: ExerciseHistoryPoint, v: number) =>
+    p.metric === 'weight' ? roundDisplay(kgToDisplay(v, unit)) : v;
   const valueLabel = (p: ExerciseHistoryPoint) => {
-    if (metric !== 'weight') return `${p.value} reps`;
-    const v = roundDisplay(kgToDisplay(rawValue(p), unit));
+    if (p.metric !== 'weight') return `${p.value} reps`;
+    const v = weightValue(rawValue(p), unit);
     return `${e1rm ? '1RM ~' : ''}${v} ${unitLabel(unit)}`;
   };
 
   const geo = useMemo(() => {
     const pts = points ?? [];
-    const ys = pts.map((p) => toDisplay(rawValue(p)));
+    const ys = pts.map((p) => toDisplay(p, rawValue(p)));
     const rawMin = Math.min(...ys);
     const rawMax = Math.max(...ys);
     const span = rawMax - rawMin;
@@ -75,7 +79,7 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
   if (exercises.length === 0) return null;
 
   const line = geo.pts
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${geo.x(i)},${geo.y(toDisplay(rawValue(p)))}`)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${geo.x(i)},${geo.y(toDisplay(p, rawValue(p)))}`)
     .join(' ');
   const idx = sel >= 0 && sel < geo.pts.length ? sel : geo.pts.length - 1;
   const selected = geo.pts[idx];
@@ -117,13 +121,13 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
             </button>
           ))}
         </div>
-        {metric === 'weight' && (
+        {homogeneous && metric === 'weight' && (
           <button
             type="button"
             onClick={() => setUseE1rm((v) => !v)}
             aria-pressed={e1rm}
             className={cn(
-              'rounded-lg px-2.5 py-1.5 text-xs font-semibold transition',
+              'rounded-lg px-2.5 py-1.5 text-xs font-semibold transition active:scale-95',
               e1rm
                 ? 'bg-accentLime/15 text-accentLime'
                 : 'bg-surfaceRaised text-textMuted hover:text-text',
@@ -181,12 +185,26 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
             )}
             {geo.pts.map((p, i) => {
               const isSel = i === idx;
+              const cy = geo.y(toDisplay(p, rawValue(p)));
               return (
-                <g key={p.workoutId} onClick={() => setSel(i)} style={{ cursor: 'pointer' }}>
-                  <circle cx={geo.x(i)} cy={geo.y(toDisplay(rawValue(p)))} r={9} fill="transparent" />
+                <g
+                  key={p.workoutId}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${valueLabel(p)}, ${formatSessionDate(p.date)}`}
+                  onClick={() => setSel(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSel(i);
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <circle cx={geo.x(i)} cy={cy} r={13} fill="transparent" />
                   <circle
                     cx={geo.x(i)}
-                    cy={geo.y(toDisplay(rawValue(p)))}
+                    cy={cy}
                     r={isSel ? 5 : 3.5}
                     fill={isSel ? '#A3E635' : '#22C55E'}
                     stroke="#151A19"

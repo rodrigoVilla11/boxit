@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
+import { PasswordField } from '@/components/ui/password-field';
 import { login } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -46,23 +47,28 @@ export default function LoginPage() {
           label="Email"
           type="email"
           inputMode="email"
+          enterKeyHint="next"
           autoComplete="email"
           placeholder="vos@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <TextField
+        <PasswordField
           label="Contraseña"
-          type="password"
+          enterKeyHint="go"
           autoComplete="current-password"
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <Button type="submit" loading={loading}>
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <Button type="submit" loading={loading} disabled={!email.trim() || !password}>
           Entrar
         </Button>
       </form>

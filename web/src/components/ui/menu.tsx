@@ -16,15 +16,26 @@ export function Menu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
+    // foco al primer ítem al abrir (patrón menú)
+    panelRef.current
+      ?.querySelector<HTMLElement>('[role="menuitem"]')
+      ?.focus();
     return () => {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
@@ -34,21 +45,23 @@ export function Menu({
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-center"
+        className="flex items-center justify-center transition active:opacity-70"
       >
         {trigger}
       </button>
       {open && (
         <div
+          ref={panelRef}
           role="menu"
           onClick={() => setOpen(false)}
           className={cn(
-            'absolute z-30 mt-1 min-w-[190px] overflow-hidden rounded-xl border border-white/10 bg-surfaceRaised p-1 shadow-card',
+            'animate-sheet-in absolute z-40 mt-1 min-w-[190px] overflow-hidden rounded-xl border border-white/10 bg-surfaceRaised p-1 shadow-card',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >
@@ -74,7 +87,7 @@ export function MenuItem({
       role="menuitem"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/5',
+        'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/5 active:bg-white/10',
         danger ? 'text-danger' : 'text-text',
       )}
     >

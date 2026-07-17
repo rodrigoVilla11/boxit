@@ -1,27 +1,26 @@
 'use client';
 
+import { forwardRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
-  variant?: 'primary' | 'ghost';
+  variant?: 'primary' | 'ghost' | 'danger';
 };
 
-export function Button({
-  loading = false,
-  variant = 'primary',
-  className,
-  children,
-  disabled,
-  ...rest
-}: Props) {
+export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
+  { loading = false, variant = 'primary', className, children, disabled, ...rest },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       className={cn(
         'inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60',
         variant === 'primary' && 'bg-primary text-ink hover:bg-primary-deep',
         variant === 'ghost' && 'bg-surfaceRaised text-text hover:bg-white/5',
+        variant === 'danger' && 'bg-danger text-ink hover:bg-danger/90',
         className,
       )}
       disabled={disabled || loading}
@@ -31,4 +30,4 @@ export function Button({
       {children}
     </button>
   );
-}
+});

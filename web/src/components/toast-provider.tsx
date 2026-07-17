@@ -51,9 +51,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           {toasts.map((t) => (
             <div
               key={t.id}
-              role="status"
+              role={t.type === 'error' ? 'alert' : 'status'}
               className={cn(
-                'pointer-events-auto flex items-center gap-2.5 rounded-2xl bg-surfaceRaised px-4 py-3 text-sm text-text shadow-card ring-1',
+                // el cuerpo no intercepta taps (deja pasar al header debajo); sólo la X sí
+                'pointer-events-none flex items-center gap-2.5 rounded-2xl bg-surfaceRaised px-4 py-3 text-sm text-text shadow-card ring-1',
                 STYLES[t.type].ring,
               )}
             >
@@ -63,7 +64,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Cerrar"
-                className="shrink-0 text-textMuted hover:text-text"
+                className="pointer-events-auto shrink-0 text-textMuted transition hover:text-text active:scale-90"
               >
                 <X className="h-4 w-4" />
               </button>

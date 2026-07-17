@@ -22,9 +22,16 @@ export function roundDisplay(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-/** Peso formateado con unidad. Ej: 100 kg → "100 kg" / "220.5 lb". */
+/** Número de peso en la unidad, localizado es-AR (coma decimal, miles con punto). */
+export function weightValue(kg: number, unit: WeightUnit): string {
+  return kgToDisplay(kg, unit).toLocaleString('es-AR', {
+    maximumFractionDigits: 1,
+  });
+}
+
+/** Peso formateado con unidad. Ej: 100 kg → "100 kg" / "220,5 lb". */
 export function formatWeight(kg: number, unit: WeightUnit): string {
-  return `${roundDisplay(kgToDisplay(kg, unit))} ${unitLabel(unit)}`;
+  return `${weightValue(kg, unit)} ${unitLabel(unit)}`;
 }
 
 /** Peso para un input (string), sin unidad; vacío si es 0. */

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUnit } from '@/components/unit-provider';
 import { formatVolume } from '@/lib/units';
+import { plural } from '@/lib/plural';
 import { getHistory, type WorkoutSummary } from '@/lib/workouts';
 
 const DAY = 86_400_000;
@@ -41,12 +42,12 @@ export function LifetimeStats() {
     <section className="rounded-2xl bg-surface p-4 shadow-card">
       <h2 className="mb-3 font-display text-base font-semibold text-text">Resumen</h2>
       <div className="grid grid-cols-2 gap-2">
-        <Tile label="Esta semana" value={`${stats.weekCount} entrenos`} />
+        <Tile label="Esta semana" value={plural(stats.weekCount, 'entreno', 'entrenos')} />
         <Tile label="Volumen semanal" value={formatVolume(stats.weekVolume, unit)} />
-        <Tile label="Entrenos totales" value={String(stats.workouts)} />
-        <Tile label="Series totales" value={String(stats.sets)} />
+        <Tile label="Entrenos totales" value={stats.workouts.toLocaleString('es-AR')} />
+        <Tile label="Series totales" value={stats.sets.toLocaleString('es-AR')} />
         <div className="col-span-2">
-          <Tile label="Volumen de por vida" value={formatVolume(stats.volume, unit)} />
+          <Tile label="Volumen total" value={formatVolume(stats.volume, unit)} />
         </div>
       </div>
     </section>
