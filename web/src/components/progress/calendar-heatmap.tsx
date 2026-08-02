@@ -5,23 +5,9 @@ import { Flame, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { getHistory, type WorkoutSummary } from '@/lib/workouts';
 import { getActivities, type Activity } from '@/lib/activities';
+import { DAY, dayKey, mondayOf, startOfDay } from '@/lib/week';
 
 const WEEKS = 13;
-const DAY = 86_400_000;
-
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-// lunes de la semana de `d`, a medianoche
-function mondayOf(d: Date): Date {
-  const x = startOfDay(d);
-  const dow = (x.getDay() + 6) % 7; // 0 = lunes
-  x.setDate(x.getDate() - dow);
-  return x;
-}
-const dayKey = (d: Date) => Math.floor(startOfDay(d).getTime() / DAY);
 
 export function CalendarHeatmap() {
   const [history, setHistory] = useState<WorkoutSummary[] | null>(null);
