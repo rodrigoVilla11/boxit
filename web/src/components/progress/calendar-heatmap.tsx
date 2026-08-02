@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Flame, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { getHistory, type WorkoutSummary } from '@/lib/workouts';
+import { getActivities, type Activity } from '@/lib/activities';
 
 const WEEKS = 13;
 const DAY = 86_400_000;
@@ -24,22 +25,29 @@ const dayKey = (d: Date) => Math.floor(startOfDay(d).getTime() / DAY);
 
 export function CalendarHeatmap() {
   const [history, setHistory] = useState<WorkoutSummary[] | null>(null);
+  const [activities, setActivities] = useState<Activity[] | null>(null);
 
   useEffect(() => {
     getHistory()
       .then(setHistory)
       .catch(() => setHistory([]));
+    getActivities()
+      .then(setActivities)
+      .catch(() => setActivities([]));
   }, []);
 
   const { columns, streak, total } = useMemo(() => {
     const perDay = new Map<number, number>();
     const trainedWeeks = new Set<number>();
-    for (const w of history ?? []) {
-      if (!w.finishedAt) continue;
-      const d = new Date(w.finishedAt);
+    const mark = (iso: string | null | undefined) => {
+      if (!iso) return;
+      const d = new Date(iso);
       perDay.set(dayKey(d), (perDay.get(dayKey(d)) ?? 0) + 1);
       trainedWeeks.add(mondayOf(d).getTime());
-    }
+    };
+    // entrenos de gym + actividades de cardio cuentan igual para la constancia
+    for (const w of history ?? []) mark(w.finishedAt);
+    for (const a of activities ?? []) mark(a.performedAt);
 
     const today = new Date();
     const thisMonday = mondayOf(today);
@@ -71,7 +79,7 @@ export function CalendarHeatmap() {
       .flat()
       .reduce((n, c) => n + (c.future ? 0 : c.count), 0);
     return { columns, streak, total };
-  }, [history]);
+  }, [history, activities]);
 
   return (
     <section className="rounded-2xl bg-surface p-4 shadow-card">
@@ -83,7 +91,7 @@ export function CalendarHeatmap() {
         </span>
       </div>
 
-      {history === null ? (
+      {history === null || activities === null ? (
         <div className="flex justify-center py-8 text-textMuted">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
@@ -113,7 +121,7 @@ export function CalendarHeatmap() {
             ))}
           </div>
           <p className="mt-3 text-xs text-textMuted">
-            {total} {total === 1 ? 'entreno' : 'entrenos'} · últimas {WEEKS} semanas
+            {total} {total === 1 ? 'sesión' : 'sesiones'} · últimas {WEEKS} semanas
           </p>
         </>
       )}

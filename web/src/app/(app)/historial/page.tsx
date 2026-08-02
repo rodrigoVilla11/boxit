@@ -1,30 +1,57 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Dumbbell, History, Loader2, Settings, Timer, Trophy } from 'lucide-react';
+import {
+  ChevronRight,
+  Dumbbell,
+  History,
+  Loader2,
+  Plus,
+  Settings,
+  Timer,
+  Trophy,
+} from 'lucide-react';
 import { formatDuration, formatSessionDate } from '@/lib/format';
 import { formatVolume, formatWeight } from '@/lib/units';
 import { plural } from '@/lib/plural';
+import {
+  activityIcon,
+  activityLabel,
+  formatDistance,
+  formatPace,
+} from '@/lib/activity';
 import { useUnit } from '@/components/unit-provider';
 import { ErrorState } from '@/components/ui/error-state';
+import { ActivityForm } from '@/components/activity/activity-form';
 import {
   getHistory,
   getPersonalRecords,
   type PersonalRecord,
   type WorkoutSummary,
 } from '@/lib/workouts';
+import { getActivities, type Activity } from '@/lib/activities';
+
+type FeedItem =
+  | { kind: 'workout'; at: number; w: WorkoutSummary }
+  | { kind: 'activity'; at: number; a: Activity };
 
 export default function HistorialPage() {
   const [workouts, setWorkouts] = useState<WorkoutSummary[] | null>(null);
+  const [activities, setActivities] = useState<Activity[] | null>(null);
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [error, setError] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const load = useCallback(() => {
     setError(false);
     setWorkouts(null);
-    getHistory()
-      .then(setWorkouts)
+    setActivities(null);
+    Promise.all([getHistory(), getActivities()])
+      .then(([h, a]) => {
+        setWorkouts(h);
+        setActivities(a);
+      })
       .catch(() => setError(true));
     getPersonalRecords()
       .then(setPrs)
@@ -35,40 +62,85 @@ export default function HistorialPage() {
     load();
   }, [load]);
 
+  const feed = useMemo<FeedItem[]>(() => {
+    if (!workouts || !activities) return [];
+    const items: FeedItem[] = [
+      ...workouts.map((w) => ({
+        kind: 'workout' as const,
+        at: new Date(w.finishedAt ?? w.startedAt).getTime(),
+        w,
+      })),
+      ...activities.map((a) => ({
+        kind: 'activity' as const,
+        at: new Date(a.performedAt).getTime(),
+        a,
+      })),
+    ];
+    return items.sort((x, y) => y.at - x.at);
+  }, [workouts, activities]);
+
+  const loading = workouts === null || activities === null;
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between pt-safe">
         <h1 className="pt-6 font-display text-2xl font-bold text-text">Historial</h1>
-        <Link
-          href="/ajustes"
-          aria-label="Ajustes"
-          className="mt-6 flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-textMuted transition hover:text-text"
-        >
-          <Settings className="h-5 w-5" />
-        </Link>
+        <div className="mt-6 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActivityOpen(true)}
+            aria-label="Registrar actividad"
+            className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            Actividad
+          </button>
+          <Link
+            href="/ajustes"
+            aria-label="Ajustes"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-textMuted transition hover:text-text"
+          >
+            <Settings className="h-5 w-5" />
+          </Link>
+        </div>
       </header>
 
       {error ? (
         <ErrorState message="No pudimos cargar tu historial." onRetry={load} />
-      ) : workouts === null ? (
+      ) : loading ? (
         <div className="flex justify-center py-16 text-textMuted">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
-      ) : workouts.length === 0 ? (
-        <EmptyState />
+      ) : feed.length === 0 ? (
+        <EmptyState onActivity={() => setActivityOpen(true)} />
       ) : (
         <div className="mt-5 space-y-6">
           {prs.length > 0 && <RecordsSection prs={prs} />}
 
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-textMuted">
-              {plural(workouts.length, 'entreno', 'entrenos')}
+              {plural(feed.length, 'sesión', 'sesiones')}
             </h2>
-            {workouts.map((w) => (
-              <SessionCard key={w.id} workout={w} />
-            ))}
+            {feed.map((item) =>
+              item.kind === 'workout' ? (
+                <SessionCard key={`w-${item.w.id}`} workout={item.w} />
+              ) : (
+                <ActivityCard key={`a-${item.a.id}`} activity={item.a} />
+              ),
+            )}
           </section>
         </div>
+      )}
+
+      {activityOpen && (
+        <ActivityForm
+          initial={null}
+          onClose={() => setActivityOpen(false)}
+          onSaved={() => {
+            setActivityOpen(false);
+            load();
+          }}
+        />
       )}
     </div>
   );
@@ -134,23 +206,68 @@ function SessionCard({ workout }: { workout: WorkoutSummary }) {
   );
 }
 
-function EmptyState() {
+function ActivityCard({ activity }: { activity: Activity }) {
+  const Icon = activityIcon(activity.type);
+  const dist = formatDistance(activity.distanceM, activity.type);
+  const pace = formatPace(activity.distanceM, activity.durationSec, activity.type);
+  return (
+    <Link
+      href={`/actividad/${activity.id}`}
+      className="flex items-center gap-3 rounded-2xl bg-surface p-4 shadow-card transition active:scale-[0.99]"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-primary">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-base font-semibold text-text">
+          {activity.label?.trim() || activityLabel(activity.type)}
+        </p>
+        <p className="mt-0.5 text-sm text-textMuted">
+          {formatSessionDate(activity.performedAt)}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-textMuted">
+          {dist && <span className="font-semibold text-text">{dist}</span>}
+          {activity.durationSec > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Timer className="h-3.5 w-3.5" />
+              {formatDuration(activity.durationSec)}
+            </span>
+          )}
+          {pace && <span>{pace}</span>}
+        </div>
+      </div>
+      <ChevronRight className="h-5 w-5 shrink-0 text-textMuted" />
+    </Link>
+  );
+}
+
+function EmptyState({ onActivity }: { onActivity: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center pb-16 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-textMuted">
         <History className="h-7 w-7" />
       </div>
-      <p className="text-sm font-medium text-text">Todavía no registraste entrenos</p>
+      <p className="text-sm font-medium text-text">Todavía no registraste nada</p>
       <p className="mt-1 max-w-[16rem] text-sm text-textMuted">
-        Cuando termines tu primer entreno, va a aparecer acá con tu volumen y tus PRs.
+        Terminá un entreno o registrá una actividad y va a aparecer acá.
       </p>
-      <Link
-        href="/entreno"
-        className="mt-5 flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 font-semibold text-ink transition hover:bg-primary-deep"
-      >
-        <Dumbbell className="h-5 w-5" />
-        Ir a entrenar
-      </Link>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <Link
+          href="/entreno"
+          className="flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 font-semibold text-ink transition hover:bg-primary-deep active:scale-95"
+        >
+          <Dumbbell className="h-5 w-5" />
+          Ir a entrenar
+        </Link>
+        <button
+          type="button"
+          onClick={onActivity}
+          className="flex h-11 items-center gap-2 rounded-2xl bg-surfaceRaised px-5 font-semibold text-text transition hover:bg-white/5 active:scale-95"
+        >
+          <Plus className="h-5 w-5" />
+          Actividad
+        </button>
+      </div>
     </div>
   );
 }

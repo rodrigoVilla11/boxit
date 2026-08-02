@@ -22,8 +22,9 @@ export function TabBar() {
           const active =
             pathname === href ||
             pathname.startsWith(`${href}/`) ||
-            // Ajustes se abre desde Historial y no tiene pestaña propia
-            (href === '/historial' && pathname === '/ajustes');
+            // Ajustes y el detalle de actividad cuelgan de Historial
+            (href === '/historial' &&
+              (pathname === '/ajustes' || pathname.startsWith('/actividad')));
           return (
             <li key={href} className="flex-1">
               <Link
