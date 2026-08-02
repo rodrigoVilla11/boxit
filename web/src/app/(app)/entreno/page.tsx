@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, GripVertical, Loader2, Plus } from 'lucide-react';
+import { Dumbbell, GripVertical, Loader2, Plus, Waves } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
+import { ActivityForm } from '@/components/activity/activity-form';
 import { FinishSummary } from '@/components/workout/finish-summary';
 import { WorkoutHeader } from '@/components/workout/workout-header';
 import { useActiveWorkout } from '@/hooks/use-active-workout';
@@ -53,6 +54,7 @@ export default function EntrenoPage() {
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [removeExId, setRemoveExId] = useState<string | null>(null);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const removeExName = wo.workout?.exercises.find((e) => e.id === removeExId)
     ?.exercise.name;
@@ -170,13 +172,32 @@ export default function EntrenoPage() {
         <p className="mt-1 max-w-[16rem] text-sm text-textMuted">
           Arrancá un entreno y registrá cada serie en vivo.
         </p>
-        <div className="mt-8 w-full max-w-xs">
+        <div className="mt-8 w-full max-w-xs space-y-2">
           <Button onClick={wo.start} loading={wo.starting}>
             <Plus className="h-5 w-5" />
             Empezar entreno
           </Button>
+          <button
+            type="button"
+            onClick={() => setActivityOpen(true)}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-surfaceRaised font-semibold text-text transition hover:bg-white/5 active:scale-[0.98]"
+          >
+            <Waves className="h-5 w-5 text-primary" />
+            Registrar actividad
+          </button>
         </div>
         {wo.error && <p className="mt-3 text-sm text-danger">{wo.error}</p>}
+
+        {activityOpen && (
+          <ActivityForm
+            initial={null}
+            onClose={() => setActivityOpen(false)}
+            onSaved={() => {
+              setActivityOpen(false);
+              toast.success('Actividad guardada.');
+            }}
+          />
+        )}
       </div>
     );
   }
