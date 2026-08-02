@@ -53,6 +53,12 @@ enum ActivityType {
   OTHER
 }
 
+enum PlanItemKind {
+  ROUTINE
+  ACTIVITY
+  REST
+}
+
 // ------------------------- Usuarios / Auth -----------------------
 
 model User {
@@ -71,6 +77,7 @@ model User {
   exercises     Exercise[]
   bodyweights   Bodyweight[]
   activities    Activity[]
+  weeklyPlans   WeeklyPlan[]
 }
 
 model RefreshToken {
@@ -117,6 +124,7 @@ model Routine {
 
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises RoutineExercise[]
+  planItems PlanItem[] // referencias desde planes semanales
 
   @@index([userId])
 }
@@ -237,4 +245,41 @@ model ActivityInterval {
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
   @@unique([activityId, order])
+}
+
+// ------------------- Planes semanales de entrenamiento -----------
+// Plan con nombre (varios por usuario, uno activo). Cada dia (0=lunes..6=domingo)
+// tiene items: una rutina de gym, una actividad de cardio planeada, o descanso.
+
+model WeeklyPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items PlanItem[]
+
+  @@index([userId])
+}
+
+model PlanItem {
+  id               String       @id @default(cuid())
+  planId           String
+  dayOfWeek        Int // 0 = lunes .. 6 = domingo
+  order            Int
+  kind             PlanItemKind
+  routineId        String?
+  activityType     ActivityType?
+  targetDistanceM  Int? // objetivo de distancia (metros)
+  targetDurationSec Int? // objetivo de tiempo (segundos)
+  note             String?
+
+  plan    WeeklyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  // Borrar una plantilla no mutila el plan: el item queda con routineId null.
+  routine Routine?   @relation(fields: [routineId], references: [id], onDelete: SetNull)
+
+  @@index([planId])
 }
