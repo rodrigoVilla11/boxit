@@ -44,6 +44,15 @@ enum WeightUnit {
   LB
 }
 
+enum ActivityType {
+  RUN
+  SWIM
+  BIKE
+  ROW
+  WALK
+  OTHER
+}
+
 // ------------------------- Usuarios / Auth -----------------------
 
 model User {
@@ -61,6 +70,7 @@ model User {
   refreshTokens RefreshToken[]
   exercises     Exercise[]
   bodyweights   Bodyweight[]
+  activities    Activity[]
 }
 
 model RefreshToken {
@@ -190,4 +200,41 @@ model Bodyweight {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, takenAt])
+}
+
+// ------------------- Actividades (cardio / resistencia) ----------
+// Sesion de cardio (correr, nadar, etc.), separada del entreno de fuerza.
+// Los totales (durationSec, distanceM) son la fuente autoritativa; los
+// intervalos son un detalle estructurado opcional.
+
+model Activity {
+  id          String       @id @default(cuid())
+  userId      String
+  type        ActivityType
+  label       String? // nombre opcional (ej "Fondo domingo")
+  performedAt DateTime     @default(now())
+  durationSec Int          @default(0)
+  distanceM   Int          @default(0) // metros, unidad canonica
+  note        String?
+  createdAt   DateTime     @default(now())
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intervals ActivityInterval[]
+
+  @@index([userId, performedAt])
+}
+
+model ActivityInterval {
+  id          String  @id @default(cuid())
+  activityId  String
+  order       Int
+  label       String?
+  reps        Int     @default(1) // "8 x" => reps 8
+  distanceM   Int? // POR repeticion (metros)
+  durationSec Int? // POR repeticion (segundos)
+  restSec     Int? // descanso entre repeticiones
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, order])
 }

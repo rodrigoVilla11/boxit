@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { WorkoutsModule } from './workouts/workouts.module';
 import { RoutinesModule } from './routines/routines.module';
 import { BodyweightModule } from './bodyweight/bodyweight.module';
+import { ActivitiesModule } from './activities/activities.module';
 import { TasksModule } from './tasks/tasks.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { TasksModule } from './tasks/tasks.module';
     WorkoutsModule,
     RoutinesModule,
     BodyweightModule,
+    ActivitiesModule,
     TasksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
