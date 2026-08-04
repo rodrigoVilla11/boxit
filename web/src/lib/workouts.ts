@@ -30,6 +30,10 @@ export type WorkoutExercise = {
   order: number;
   exerciseId: string;
   exercise: Exercise;
+  // objetivos de la rutina (guía); null en alta manual
+  targetReps: number | null;
+  targetWeight: number | null;
+  restSeconds: number | null;
   sets: WorkoutSet[];
 };
 

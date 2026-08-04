@@ -6,7 +6,7 @@ import { Menu, MenuItem } from '@/components/ui/menu';
 import { ExerciseHistorySheet } from '@/components/progress/exercise-history-sheet';
 import { SetRow } from './set-row';
 import { useUnit } from '@/components/unit-provider';
-import { unitLabel } from '@/lib/units';
+import { kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
 import { muscleLabel } from '@/lib/labels';
 import { bestPrSetId } from '@/lib/prs';
 import type {
@@ -39,6 +39,16 @@ export function ExerciseCard({
 }) {
   const { unit } = useUnit();
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Guía de la rutina (si el entreno salió de una): "Meta 8 reps · 80 kg"
+  const targetText = [
+    we.targetReps ? `${we.targetReps} reps` : '',
+    we.targetWeight
+      ? `${roundDisplay(kgToDisplay(we.targetWeight, unit))} ${unitLabel(unit)}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   // Serie que ostenta el récord en vivo (una sola insignia por ejercicio)
   const prSetId = bestPrSetId(we.sets, record);
@@ -84,6 +94,9 @@ export function ExerciseCard({
             <p className="text-xs text-textMuted">
               {muscleLabel(we.exercise.primaryMuscle)}
             </p>
+            {targetText && (
+              <p className="text-[11px] font-medium text-primary/80">Meta {targetText}</p>
+            )}
           </div>
         </div>
         <Menu
@@ -121,6 +134,7 @@ export function ExerciseCard({
             index={i}
             set={set}
             previous={previousForRow[i]}
+            target={{ weight: we.targetWeight, reps: we.targetReps }}
             isPr={set.id === prSetId}
             onSave={onSaveSet}
             onRemove={onRemoveSet}

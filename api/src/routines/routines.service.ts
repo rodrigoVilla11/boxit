@@ -115,6 +115,10 @@ export class RoutinesService {
           create: routine.exercises.map((re) => ({
             exerciseId: re.exerciseId,
             order: re.order,
+            // Copia los objetivos de la rutina como guía durante el entreno
+            targetReps: re.targetReps,
+            targetWeight: re.targetWeight,
+            restSeconds: re.restSeconds,
             // Prefila cada serie con los objetivos de la rutina (si los hay)
             sets: {
               create: Array.from({ length: re.targetSets }, (_, i) => ({

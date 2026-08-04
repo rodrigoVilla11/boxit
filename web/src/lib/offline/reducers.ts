@@ -75,6 +75,10 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
         order: nextOrder(doc.exercises),
         exerciseId: op.exercise.id,
         exercise: op.exercise,
+        // alta manual: sin objetivos (los targets llegan al empezar una rutina)
+        targetReps: null,
+        targetWeight: null,
+        restSeconds: null,
         sets: [freshSet(op.setId, 1)],
       };
       return { ...doc, exercises: [...doc.exercises, we] };

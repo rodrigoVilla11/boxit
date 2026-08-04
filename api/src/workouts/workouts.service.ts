@@ -289,6 +289,9 @@ export class WorkoutsService {
           create: source.exercises.map((we) => ({
             exerciseId: we.exerciseId,
             order: we.order,
+            targetReps: we.targetReps,
+            targetWeight: we.targetWeight,
+            restSeconds: we.restSeconds,
             sets: {
               create: we.sets.map((s) => ({
                 order: s.order,

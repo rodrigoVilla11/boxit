@@ -47,6 +47,7 @@ export function SetRow({
   index,
   set,
   previous,
+  target,
   isPr = false,
   onSave,
   onRemove,
@@ -56,6 +57,7 @@ export function SetRow({
   index: number;
   set: WorkoutSet;
   previous?: PreviousSet;
+  target?: { weight: number | null; reps: number | null };
   isPr?: boolean;
   onSave: (setId: string, patch: SetPatch) => void;
   onRemove: (setId: string) => void;
@@ -208,7 +210,11 @@ export function SetRow({
         <Spinner
           value={weight}
           placeholder={
-            previous ? String(roundDisplay(kgToDisplay(previous.weight, unit))) : '0'
+            previous
+              ? String(roundDisplay(kgToDisplay(previous.weight, unit)))
+              : target?.weight
+                ? String(roundDisplay(kgToDisplay(target.weight, unit)))
+                : '0'
           }
           inputMode="decimal"
           ariaLabel={`Peso serie ${index + 1}`}
@@ -219,7 +225,9 @@ export function SetRow({
 
         <Spinner
           value={reps}
-          placeholder={previous ? String(previous.reps) : '0'}
+          placeholder={
+            previous ? String(previous.reps) : target?.reps ? String(target.reps) : '0'
+          }
           inputMode="numeric"
           ariaLabel={`Reps serie ${index + 1}`}
           onChange={setReps}
