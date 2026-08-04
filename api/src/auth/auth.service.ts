@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
-import { User, WeightUnit } from '@prisma/client';
+import { Sex, User, WeightUnit } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -20,6 +20,21 @@ export type PublicUser = {
   name: string;
   weightUnit: WeightUnit;
   isAdmin: boolean;
+  // perfil (todo opcional)
+  birthDate: string | null; // YYYY-MM-DD
+  sex: Sex | null;
+  heightCm: number | null;
+  goalWeightKg: number | null;
+};
+
+/** Campos de perfil editables; null limpia el valor. */
+export type ProfilePatch = {
+  name?: string;
+  weightUnit?: WeightUnit;
+  birthDate?: string | null;
+  sex?: Sex | null;
+  heightCm?: number | null;
+  goalWeightKg?: number | null;
 };
 export type AuthResult = { user: PublicUser } & IssuedTokens;
 
@@ -68,19 +83,37 @@ export class AuthService {
       name: u.name,
       weightUnit: u.weightUnit,
       isAdmin: u.isAdmin,
+      // la fecha viaja como YYYY-MM-DD: es un dato de calendario, no un instante
+      birthDate: u.birthDate ? u.birthDate.toISOString().slice(0, 10) : null,
+      sex: u.sex,
+      heightCm: u.heightCm,
+      goalWeightKg: u.goalWeightKg,
     };
   }
 
-  /** Actualiza nombre y/o unidad de peso (ambos opcionales). */
+  /** Actualiza el perfil. Sólo toca los campos presentes; null los limpia. */
   async updateProfile(
     userId: string,
-    data: { weightUnit?: WeightUnit; name?: string },
+    data: ProfilePatch,
   ): Promise<PublicUser> {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         ...(data.weightUnit !== undefined ? { weightUnit: data.weightUnit } : {}),
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+        ...(data.birthDate !== undefined
+          ? {
+              // mediodía UTC: evita que el día se corra por timezone
+              birthDate: data.birthDate
+                ? new Date(`${data.birthDate.slice(0, 10)}T12:00:00.000Z`)
+                : null,
+            }
+          : {}),
+        ...(data.sex !== undefined ? { sex: data.sex } : {}),
+        ...(data.heightCm !== undefined ? { heightCm: data.heightCm } : {}),
+        ...(data.goalWeightKg !== undefined
+          ? { goalWeightKg: data.goalWeightKg }
+          : {}),
       },
     });
     return this.toPublic(user);

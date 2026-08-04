@@ -3,6 +3,7 @@ import { apiFetch, extractError } from './api-client';
 export type Bodyweight = {
   id: string;
   weightKg: number; // siempre en kg; convertir con lib/units
+  bodyFatPct: number | null; // % de grasa de esa pesada
   takenAt: string;
   note: string | null;
   createdAt: string;
@@ -10,6 +11,7 @@ export type Bodyweight = {
 
 export type BodyweightInput = {
   weightKg: number;
+  bodyFatPct?: number | null;
   takenAt?: string;
   note?: string | null;
 };

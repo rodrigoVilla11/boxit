@@ -2,6 +2,7 @@
 
 import { Loader2, LogOut, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
+import { SettingsButton } from '@/components/nav/settings-button';
 import { useNow } from '@/hooks/use-now';
 import { useUnit } from '@/components/unit-provider';
 import { formatDuration } from '@/lib/format';
@@ -45,6 +46,7 @@ export function WorkoutHeader({
             {finishing && <Loader2 className="h-4 w-4 animate-spin" />}
             Terminar
           </button>
+          <SettingsButton />
           <Menu
             label="Más opciones"
             trigger={

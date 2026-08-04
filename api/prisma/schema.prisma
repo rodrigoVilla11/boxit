@@ -44,6 +44,12 @@ enum WeightUnit {
   LB
 }
 
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
 enum ActivityType {
   RUN
   SWIM
@@ -70,6 +76,12 @@ model User {
   isAdmin      Boolean    @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
+  // Perfil (todo opcional: la app funciona sin cargar nada de esto)
+  birthDate    DateTime? // sólo la fecha importa; se guarda a mediodía UTC
+  sex          Sex?
+  heightCm     Float? // para el IMC
+  goalWeightKg Float? // objetivo de peso, en kg
 
   workouts      Workout[]
   routines      Routine[]
@@ -199,12 +211,13 @@ model WorkoutSet {
 // -------------------------- Peso corporal ------------------------
 
 model Bodyweight {
-  id        String   @id @default(cuid())
-  userId    String
-  weightKg  Float // siempre en kg; la UI convierte
-  takenAt   DateTime @default(now())
-  note      String?
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  weightKg   Float // siempre en kg; la UI convierte
+  bodyFatPct Float? // % de grasa medido en la misma pesada (opcional)
+  takenAt    DateTime @default(now())
+  note       String?
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -1,12 +1,29 @@
 import { apiFetch, extractError } from './api-client';
 import type { WeightUnit } from './units';
 
+export type Sex = 'MALE' | 'FEMALE' | 'OTHER';
+
 export type SessionUser = {
   id: string;
   email: string;
   name: string;
   weightUnit: WeightUnit;
   isAdmin: boolean;
+  // perfil (todo opcional)
+  birthDate: string | null; // YYYY-MM-DD
+  sex: Sex | null;
+  heightCm: number | null;
+  goalWeightKg: number | null; // siempre en kg
+};
+
+/** Parche de perfil: omitir un campo lo deja igual; null lo limpia. */
+export type ProfilePatch = {
+  name?: string;
+  weightUnit?: WeightUnit;
+  birthDate?: string | null;
+  sex?: Sex | null;
+  heightCm?: number | null;
+  goalWeightKg?: number | null;
 };
 
 async function parse(res: Response): Promise<unknown> {
@@ -51,10 +68,7 @@ export async function getMe(): Promise<SessionUser | null> {
   return (data as { user: SessionUser }).user;
 }
 
-export async function updateProfile(patch: {
-  name?: string;
-  weightUnit?: WeightUnit;
-}): Promise<SessionUser> {
+export async function updateProfile(patch: ProfilePatch): Promise<SessionUser> {
   const res = await apiFetch('/api/auth/me', {
     method: 'PATCH',
     body: JSON.stringify(patch),

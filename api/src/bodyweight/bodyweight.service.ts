@@ -21,6 +21,7 @@ export class BodyweightService {
       data: {
         userId,
         weightKg: dto.weightKg,
+        bodyFatPct: dto.bodyFatPct ?? null,
         takenAt: dto.takenAt ? new Date(dto.takenAt) : undefined,
         note: dto.note?.trim() || null,
       },
@@ -35,6 +36,7 @@ export class BodyweightService {
     await this.assertOwner(userId, id);
     const data: Prisma.BodyweightUpdateInput = {};
     if (dto.weightKg !== undefined) data.weightKg = dto.weightKg;
+    if (dto.bodyFatPct !== undefined) data.bodyFatPct = dto.bodyFatPct;
     if (dto.takenAt !== undefined) data.takenAt = new Date(dto.takenAt);
     if (dto.note !== undefined) data.note = dto.note?.trim() || null;
     return this.prisma.bodyweight.update({ where: { id }, data });

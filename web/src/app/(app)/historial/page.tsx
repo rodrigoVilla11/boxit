@@ -8,7 +8,6 @@ import {
   History,
   Loader2,
   Plus,
-  Settings,
   Timer,
   Trophy,
 } from 'lucide-react';
@@ -23,6 +22,7 @@ import {
 } from '@/lib/activity';
 import { useUnit } from '@/components/unit-provider';
 import { ErrorState } from '@/components/ui/error-state';
+import { SettingsButton } from '@/components/nav/settings-button';
 import { ActivityForm } from '@/components/activity/activity-form';
 import {
   getHistory,
@@ -95,13 +95,7 @@ export default function HistorialPage() {
             <Plus className="h-4 w-4" />
             Actividad
           </button>
-          <Link
-            href="/ajustes"
-            aria-label="Ajustes"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-textMuted transition hover:text-text"
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
+          <SettingsButton />
         </div>
       </header>
 

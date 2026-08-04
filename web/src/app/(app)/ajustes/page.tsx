@@ -4,35 +4,34 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
-  Check,
   ChevronLeft,
   Download,
   KeyRound,
   Loader2,
   LogOut,
   Minus,
-  Pencil,
   Plus,
   Trash2,
   Volume2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
-import { TextField } from '@/components/ui/text-field';
 import { PasswordField } from '@/components/ui/password-field';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SwitchVisual } from '@/components/ui/switch';
 import { useUnit } from '@/components/unit-provider';
 import { usePreferences } from '@/components/preferences-provider';
 import { useToast } from '@/components/toast-provider';
+import { ProfileCard } from '@/components/profile/profile-card';
+import { ProfileForm } from '@/components/profile/profile-form';
 import {
   changePassword,
   deleteAccount,
   getMe,
   logout,
-  updateProfile,
   type SessionUser,
 } from '@/lib/auth';
+import { getBodyweights, type Bodyweight } from '@/lib/bodyweight';
 import { exportCsv, exportJson } from '@/lib/export';
 import type { WeightUnit } from '@/lib/units';
 
@@ -49,10 +48,9 @@ export default function AjustesPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Nombre editable
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-  const [savingName, setSavingName] = useState(false);
+  // Perfil: la última pesada da peso, grasa e IMC
+  const [latest, setLatest] = useState<Bodyweight | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
 
   // Cambiar contraseña
   const [pwOpen, setPwOpen] = useState(false);
@@ -64,33 +62,12 @@ export default function AjustesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    getMe()
-      .then((u) => {
-        setUser(u);
-        setNameInput(u?.name ?? '');
-      })
+    getMe().then(setUser).catch(() => {});
+    // la lista viene del más nuevo al más viejo
+    getBodyweights()
+      .then((rows) => setLatest(rows[0] ?? null))
       .catch(() => {});
   }, []);
-
-  async function saveName() {
-    const name = nameInput.trim();
-    if (name.length < 2 || name === user?.name) {
-      setEditingName(false);
-      setNameInput(user?.name ?? '');
-      return;
-    }
-    setSavingName(true);
-    try {
-      const updated = await updateProfile({ name });
-      setUser(updated);
-      setEditingName(false);
-      toast.success('Nombre actualizado.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No se pudo guardar.');
-    } finally {
-      setSavingName(false);
-    }
-  }
 
   async function savePassword() {
     if (curPw.length < 1 || newPw.length < 8) return;
@@ -152,63 +129,19 @@ export default function AjustesPage() {
         <h1 className="mt-5 font-display text-xl font-bold text-text">Ajustes</h1>
       </header>
 
-      {/* Cuenta */}
-      {user === null ? (
-        <div className="mt-5 h-[4.75rem] animate-pulse rounded-2xl bg-surface" />
-      ) : (
-        <div className="mt-5 rounded-2xl bg-surface p-4 shadow-card">
-          {editingName ? (
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <TextField
-                  label="Nombre"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !savingName) saveName();
-                  }}
-                  enterKeyHint="done"
-                  maxLength={60}
-                  autoFocus
-                />
-              </div>
-              <button
-                type="button"
-                onClick={saveName}
-                disabled={savingName}
-                aria-label="Guardar nombre"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-ink transition active:scale-95 disabled:opacity-60"
-              >
-                {savingName ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Check className="h-5 w-5" strokeWidth={3} />
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-display font-semibold text-text">
-                  {user.name}
-                </p>
-                <p className="truncate text-sm text-textMuted">{user.email}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setNameInput(user.name);
-                  setEditingName(true);
-                }}
-                aria-label="Editar nombre"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-textMuted transition hover:text-text active:scale-95"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Perfil */}
+      <section className="mt-5">
+        <h2 className="mb-2 text-sm font-semibold text-textMuted">Perfil</h2>
+        {user === null ? (
+          <div className="h-[9rem] animate-pulse rounded-2xl bg-surface" />
+        ) : (
+          <ProfileCard
+            user={user}
+            latest={latest}
+            onEdit={() => setEditingProfile(true)}
+          />
+        )}
+      </section>
 
       {/* Unidad de peso */}
       <section className="mt-5">
@@ -388,6 +321,20 @@ export default function AjustesPage() {
           Cerrar sesión
         </Button>
       </div>
+
+      {editingProfile && user && (
+        <ProfileForm
+          user={user}
+          latest={latest}
+          onClose={() => setEditingProfile(false)}
+          onSaved={(updated, entry) => {
+            setUser(updated);
+            if (entry) setLatest(entry);
+            setEditingProfile(false);
+            toast.success('Perfil actualizado.');
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDelete}

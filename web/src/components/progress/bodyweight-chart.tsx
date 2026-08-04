@@ -4,8 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
 import { useUnit } from '@/components/unit-provider';
 import { useToast } from '@/components/toast-provider';
-import { displayToKg, kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
+import {
+  displayToKg,
+  formatWeight,
+  kgToDisplay,
+  roundDisplay,
+  unitLabel,
+} from '@/lib/units';
 import { formatSessionDate } from '@/lib/format';
+import { formatBodyFat } from '@/lib/profile';
 import {
   createBodyweight,
   deleteBodyweight,
@@ -24,6 +31,7 @@ export function BodyweightChart() {
   const toast = useToast();
   const [rows, setRows] = useState<Bodyweight[] | null>(null);
   const [input, setInput] = useState('');
+  const [fat, setFat] = useState('');
   const [saving, setSaving] = useState(false);
   const [sel, setSel] = useState<number>(-1);
 
@@ -76,12 +84,17 @@ export function BodyweightChart() {
       toast.error('Ingresá un peso válido.');
       return;
     }
+    const f = parseFloat(fat.replace(',', '.'));
     setSaving(true);
     try {
-      const created = await createBodyweight({ weightKg: displayToKg(v, unit) });
+      const created = await createBodyweight({
+        weightKg: displayToKg(v, unit),
+        bodyFatPct: Number.isFinite(f) && f > 0 ? f : null,
+      });
       setRows((prev) => [created, ...(prev ?? [])]);
       setSel((prev) => (prev < 0 ? 0 : prev + 1)); // sigue apuntando al más nuevo
       setInput('');
+      setFat('');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'No pudimos guardar tu peso.');
     } finally {
@@ -109,7 +122,7 @@ export function BodyweightChart() {
         {latest && (
           <span className="inline-flex items-center gap-1 text-sm">
             <span className="font-display font-semibold text-primary">
-              {roundDisplay(kgToDisplay(latest.weightKg, unit))} {unitLabel(unit)}
+              {formatWeight(latest.weightKg, unit)}
             </span>
             {delta !== 0 && (
               <span
@@ -122,7 +135,7 @@ export function BodyweightChart() {
                 ) : (
                   <TrendingUp className="h-3.5 w-3.5" />
                 )}
-                {Math.abs(delta)}
+                {Math.abs(delta).toLocaleString('es-AR', { maximumFractionDigits: 1 })}
               </span>
             )}
           </span>
@@ -138,7 +151,12 @@ export function BodyweightChart() {
           {asc.length > 0 ? (
             <>
               <div className="mt-1 flex items-center justify-between text-xs text-textMuted">
-                <span>{selected ? formatSessionDate(selected.takenAt) : ''}</span>
+                <span>
+                  {selected ? formatSessionDate(selected.takenAt) : ''}
+                  {selected?.bodyFatPct
+                    ? ` · ${formatBodyFat(selected.bodyFatPct)} grasa`
+                    : ''}
+                </span>
                 {selected && (
                   <button
                     type="button"
@@ -222,13 +240,23 @@ export function BodyweightChart() {
               onKeyDown={(e) => e.key === 'Enter' && !saving && add()}
               placeholder={`Tu peso en ${unitLabel(unit)}`}
               aria-label={`Tu peso en ${unitLabel(unit)}`}
-              className="h-11 flex-1 rounded-xl bg-surfaceRaised px-3 text-center text-sm text-text outline-none placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
+              className="h-11 min-w-0 flex-1 rounded-xl bg-surfaceRaised px-3 text-center text-sm text-text outline-none placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
+            />
+            <input
+              inputMode="decimal"
+              enterKeyHint="done"
+              value={fat}
+              onChange={(e) => setFat(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !saving && add()}
+              placeholder="% grasa"
+              aria-label="Porcentaje de grasa corporal (opcional)"
+              className="h-11 w-[4.75rem] shrink-0 rounded-xl bg-surfaceRaised px-1.5 text-center text-sm text-text outline-none placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"
               onClick={add}
               disabled={saving || !input.trim()}
-              className="flex h-11 items-center gap-1 rounded-xl bg-primary px-4 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95 disabled:opacity-60"
+              className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-primary px-3 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -16,6 +16,12 @@ export class UpdateBodyweightDto {
   weightKg?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(1, { message: 'Porcentaje de grasa inválido.' })
+  @Max(70, { message: 'Porcentaje de grasa inválido.' })
+  bodyFatPct?: number | null;
+
+  @IsOptional()
   @IsDateString({}, { message: 'Fecha inválida.' })
   takenAt?: string;
 
