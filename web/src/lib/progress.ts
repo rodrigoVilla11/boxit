@@ -35,6 +35,34 @@ export async function getMuscleMap(days = 30): Promise<MuscleStat[]> {
   return json<MuscleStat[]>(res, 'No pudimos cargar el mapa de músculos.');
 }
 
+export type ExerciseSessionSet = {
+  order: number;
+  type: 'NORMAL' | 'WARMUP';
+  weight: number;
+  reps: number;
+  rpe: number | null;
+  note: string | null;
+};
+
+export type ExerciseSession = {
+  workoutId: string;
+  performedAt: string | null;
+  sets: ExerciseSessionSet[];
+  volume: number;
+  topWeight: number;
+  topReps: number;
+};
+
+/** Historial detallado del ejercicio: cada sesión con todas sus series. */
+export async function getExerciseSessions(
+  exerciseId: string,
+  limit?: number,
+): Promise<ExerciseSession[]> {
+  const q = limit && limit > 0 ? `?limit=${limit}` : '';
+  const res = await apiFetch(`/api/exercises/${exerciseId}/sessions${q}`);
+  return json<ExerciseSession[]>(res, 'No pudimos cargar el historial.');
+}
+
 export async function getExerciseHistory(
   exerciseId: string,
   days?: number,

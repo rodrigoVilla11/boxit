@@ -1,7 +1,9 @@
 'use client';
 
-import { MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { History, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
+import { ExerciseHistorySheet } from '@/components/progress/exercise-history-sheet';
 import { SetRow } from './set-row';
 import { useUnit } from '@/components/unit-provider';
 import { unitLabel } from '@/lib/units';
@@ -38,6 +40,7 @@ export function ExerciseCard({
   onReorderSets: (workoutExerciseId: string, ids: string[]) => void;
 }) {
   const { unit } = useUnit();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Serie que ostenta el récord en vivo (una sola insignia por ejercicio)
   const prSetId = bestPrSetId(we.sets, record);
@@ -69,8 +72,16 @@ export function ExerciseCard({
         <div className="flex min-w-0 items-start gap-1">
           {dragHandle}
           <div className="min-w-0">
-            <h3 className="truncate font-display text-base font-semibold text-primary">
-              {we.exercise.name}
+            <h3 className="font-display text-base font-semibold text-primary">
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                aria-label={`Ver historial de ${we.exercise.name}`}
+                className="flex max-w-full items-center gap-1.5 text-left"
+              >
+                <span className="truncate">{we.exercise.name}</span>
+                <History className="h-3.5 w-3.5 shrink-0 text-textMuted" />
+              </button>
             </h3>
             <p className="text-xs text-textMuted">
               {muscleLabel(we.exercise.primaryMuscle)}
@@ -85,6 +96,10 @@ export function ExerciseCard({
             </span>
           }
         >
+          <MenuItem onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4" />
+            Ver historial
+          </MenuItem>
           <MenuItem danger onClick={() => onRemoveExercise(we.id)}>
             <Trash2 className="h-4 w-4" />
             Quitar ejercicio
@@ -128,6 +143,14 @@ export function ExerciseCard({
         <Plus className="h-4 w-4" />
         Agregar serie
       </button>
+
+      {historyOpen && (
+        <ExerciseHistorySheet
+          exerciseId={we.exerciseId}
+          exerciseName={we.exercise.name}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
     </section>
   );
 }

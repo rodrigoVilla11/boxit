@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, History, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useUnit } from '@/components/unit-provider';
 import { kgToDisplay, roundDisplay, unitLabel, weightValue } from '@/lib/units';
 import { formatSessionDate } from '@/lib/format';
 import { epley1RM } from '@/lib/prs';
 import { getExerciseHistory, type ExerciseHistoryPoint } from '@/lib/progress';
+import { ExerciseHistorySheet } from './exercise-history-sheet';
 
 export type ExerciseOption = { exerciseId: string; exerciseName: string };
 
@@ -30,6 +31,7 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
   const [useE1rm, setUseE1rm] = useState(false);
   const [points, setPoints] = useState<ExerciseHistoryPoint[] | null>(null);
   const [sel, setSel] = useState(-1);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!exId) return;
@@ -78,6 +80,8 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
 
   if (exercises.length === 0) return null;
 
+  const exName =
+    exercises.find((e) => e.exerciseId === exId)?.exerciseName ?? 'Ejercicio';
   const line = geo.pts
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${geo.x(i)},${geo.y(toDisplay(p, rawValue(p)))}`)
     .join(' ');
@@ -215,6 +219,23 @@ export function ExerciseProgress({ exercises }: { exercises: ExerciseOption[] })
             })}
           </svg>
         </>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setHistoryOpen(true)}
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-surfaceRaised py-2.5 text-sm font-medium text-textMuted transition hover:text-text active:scale-[0.99]"
+      >
+        <History className="h-4 w-4" />
+        Ver historial por sesión
+      </button>
+
+      {historyOpen && (
+        <ExerciseHistorySheet
+          exerciseId={exId}
+          exerciseName={exName}
+          onClose={() => setHistoryOpen(false)}
+        />
       )}
     </section>
   );

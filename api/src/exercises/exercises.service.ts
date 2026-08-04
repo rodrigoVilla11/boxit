@@ -30,6 +30,24 @@ export type ExerciseHistoryPoint = {
   reps: number;
 };
 
+export type ExerciseSessionSet = {
+  order: number;
+  type: SetType;
+  weight: number;
+  reps: number;
+  rpe: number | null;
+  note: string | null;
+};
+
+export type ExerciseSession = {
+  workoutId: string;
+  performedAt: Date | null;
+  sets: ExerciseSessionSet[];
+  volume: number; // kg, sólo series de trabajo
+  topWeight: number;
+  topReps: number;
+};
+
 @Injectable()
 export class ExercisesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -168,6 +186,63 @@ export class ExercisesService {
       performedAt: we.workout.finishedAt,
       sets: we.sets,
     };
+  }
+
+  /**
+   * Historial detallado: por cada sesión terminada en la que se hizo este
+   * ejercicio, TODAS las series completadas (peso, reps, RPE, nota) más el
+   * resumen de la sesión. De la más reciente a la más vieja.
+   */
+  async sessions(
+    userId: string,
+    exerciseId: string,
+    limit?: number,
+  ): Promise<ExerciseSession[]> {
+    const take = Math.min(Math.max(limit ?? 30, 1), 100);
+    const wes = await this.prisma.workoutExercise.findMany({
+      where: {
+        exerciseId,
+        workout: { userId, finishedAt: { not: null } },
+        sets: { some: { completed: true } },
+      },
+      orderBy: { workout: { finishedAt: 'desc' } },
+      take,
+      select: {
+        workout: { select: { id: true, finishedAt: true } },
+        sets: {
+          where: { completed: true },
+          orderBy: { order: 'asc' },
+          select: {
+            order: true,
+            type: true,
+            weight: true,
+            reps: true,
+            rpe: true,
+            note: true,
+          },
+        },
+      },
+    });
+
+    return wes.map((we) => {
+      // Los totales de la sesión excluyen el calentamiento (igual que el resto).
+      const working = we.sets.filter((s) => s.type === 'NORMAL');
+      const best = working.reduce<ExerciseSessionSet | null>(
+        (a, b) =>
+          !a || b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps)
+            ? b
+            : a,
+        null,
+      );
+      return {
+        workoutId: we.workout.id,
+        performedAt: we.workout.finishedAt,
+        sets: we.sets,
+        volume: working.reduce((acc, s) => acc + s.weight * s.reps, 0),
+        topWeight: best?.weight ?? 0,
+        topReps: best?.reps ?? 0,
+      };
+    });
   }
 
   /**

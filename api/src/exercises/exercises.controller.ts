@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import {
   ExerciseHistoryPoint,
+  ExerciseSession,
   ExercisesService,
   ExerciseWithMeta,
   PreviousSession,
@@ -62,6 +63,16 @@ export class ExercisesController {
     @Param('id') id: string,
   ): Promise<PreviousSession | null> {
     return this.exercisesService.previousSession(user.id, id);
+  }
+
+  // Historial detallado: cada sesión con todas sus series (limit opcional)
+  @Get(':id/sessions')
+  sessions(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ): Promise<ExerciseSession[]> {
+    return this.exercisesService.sessions(user.id, id, limit);
   }
 
   // Progresión del ejercicio en el tiempo (days opcional: 7/30/90…)
