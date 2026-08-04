@@ -1,5 +1,6 @@
 import { apiFetch, extractError } from './api-client';
 import type { ActivityType } from './activities';
+import type { CardioRoutine } from './cardio-routines';
 
 export type PlanItemKind = 'ROUTINE' | 'ACTIVITY' | 'REST';
 
@@ -10,6 +11,9 @@ export type PlanItem = {
   kind: PlanItemKind;
   routineId: string | null;
   routine: { id: string; name: string } | null;
+  // plantilla de cardio (si el ítem la usa): viaja completa, con intervalos
+  cardioRoutineId: string | null;
+  cardioRoutine: CardioRoutine | null;
   activityType: ActivityType | null;
   targetDistanceM: number | null;
   targetDurationSec: number | null;
@@ -29,11 +33,30 @@ export type PlanItemInput = {
   dayOfWeek: number;
   kind: PlanItemKind;
   routineId?: string;
+  cardioRoutineId?: string | null;
   activityType?: ActivityType;
   targetDistanceM?: number | null;
   targetDurationSec?: number | null;
   note?: string | null;
 };
+
+/**
+ * Objetivos efectivos de un ítem de cardio. Si la plantilla sigue existiendo,
+ * manda ella (así editarla se refleja al toque en todos los días que la usan);
+ * los valores copiados en el ítem son el respaldo para cuando se borra.
+ */
+export function itemTargets(it: PlanItem): {
+  type: ActivityType | null;
+  distanceM: number | null;
+  durationSec: number | null;
+} {
+  const c = it.cardioRoutine;
+  return {
+    type: c?.type ?? it.activityType,
+    distanceM: c ? c.targetDistanceM : it.targetDistanceM,
+    durationSec: c ? c.targetDurationSec : it.targetDurationSec,
+  };
+}
 
 async function json<T>(res: Response, fallback: string): Promise<T> {
   const text = await res.text();

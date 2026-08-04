@@ -15,9 +15,16 @@ import {
   activityLabel,
   formatDistance,
 } from '@/lib/activity';
-import { updatePlan, type PlanItem, type PlanItemInput, type WeeklyPlan } from '@/lib/plans';
+import {
+  itemTargets,
+  updatePlan,
+  type PlanItem,
+  type PlanItemInput,
+  type WeeklyPlan,
+} from '@/lib/plans';
 import type { ActivityType } from '@/lib/activities';
 import type { Routine } from '@/lib/routines';
+import { intervalsSummary, type CardioRoutine } from '@/lib/cardio-routines';
 
 let keySeq = 0;
 type Draft = {
@@ -25,6 +32,9 @@ type Draft = {
   kind: 'ROUTINE' | 'ACTIVITY' | 'REST';
   routineId?: string;
   routineName?: string;
+  cardioRoutineId?: string;
+  cardioRoutineName?: string;
+  cardioSummary?: string;
   activityType?: ActivityType;
   targetDistanceM?: number | null;
   targetDurationSec?: number | null;
@@ -36,25 +46,33 @@ const num = (s: string): number => {
 };
 
 function toDraft(it: PlanItem): Draft {
+  const { type, distanceM, durationSec } = itemTargets(it);
   return {
     key: `k${keySeq++}`,
     kind: it.kind,
     routineId: it.routineId ?? undefined,
     routineName: it.routine?.name,
-    activityType: it.activityType ?? undefined,
-    targetDistanceM: it.targetDistanceM,
-    targetDurationSec: it.targetDurationSec,
+    cardioRoutineId: it.cardioRoutineId ?? undefined,
+    cardioRoutineName: it.cardioRoutine?.name,
+    cardioSummary: it.cardioRoutine
+      ? intervalsSummary(it.cardioRoutine.intervals)
+      : undefined,
+    activityType: type ?? undefined,
+    targetDistanceM: distanceM,
+    targetDurationSec: durationSec,
   };
 }
 
 function draftToInput(d: Draft, dayOfWeek: number): PlanItemInput {
+  const isActivity = d.kind === 'ACTIVITY';
   return {
     dayOfWeek,
     kind: d.kind,
     routineId: d.kind === 'ROUTINE' ? d.routineId : undefined,
-    activityType: d.kind === 'ACTIVITY' ? d.activityType : undefined,
-    targetDistanceM: d.kind === 'ACTIVITY' ? d.targetDistanceM ?? null : null,
-    targetDurationSec: d.kind === 'ACTIVITY' ? d.targetDurationSec ?? null : null,
+    cardioRoutineId: isActivity ? d.cardioRoutineId ?? null : null,
+    activityType: isActivity ? d.activityType : undefined,
+    targetDistanceM: isActivity ? d.targetDistanceM ?? null : null,
+    targetDurationSec: isActivity ? d.targetDurationSec ?? null : null,
   };
 }
 
@@ -62,12 +80,14 @@ export function DayEditor({
   plan,
   day,
   routines,
+  cardioRoutines,
   onClose,
   onSaved,
 }: {
   plan: WeeklyPlan;
   day: number;
   routines: Routine[];
+  cardioRoutines: CardioRoutine[];
   onClose: () => void;
   onSaved: (p: WeeklyPlan) => void;
 }) {
@@ -107,14 +127,7 @@ export function DayEditor({
     // reconstruye TODO el plan: los otros días + los ítems de este día
     const others: PlanItemInput[] = plan.items
       .filter((i) => i.dayOfWeek !== day)
-      .map((i) => ({
-        dayOfWeek: i.dayOfWeek,
-        kind: i.kind,
-        routineId: i.kind === 'ROUTINE' ? i.routineId ?? undefined : undefined,
-        activityType: i.kind === 'ACTIVITY' ? i.activityType ?? undefined : undefined,
-        targetDistanceM: i.kind === 'ACTIVITY' ? i.targetDistanceM : null,
-        targetDurationSec: i.kind === 'ACTIVITY' ? i.targetDurationSec : null,
-      }));
+      .map((i) => draftToInput(toDraft(i), i.dayOfWeek));
     const mine = items.map((d) => draftToInput(d, day));
     try {
       const updated = await updatePlan(plan.id, { items: [...others, ...mine] });
@@ -205,9 +218,44 @@ export function DayEditor({
           </div>
         )}
 
-        {/* Agregar cardio */}
+        {/* Plantillas de cardio */}
+        {cardioRoutines.length > 0 && (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-textMuted">
+              Plantillas de cardio
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {cardioRoutines.map((c) => {
+                const Icon = activityIcon(c.type);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() =>
+                      add({
+                        kind: 'ACTIVITY',
+                        cardioRoutineId: c.id,
+                        cardioRoutineName: c.name,
+                        cardioSummary: intervalsSummary(c.intervals),
+                        activityType: c.type,
+                        targetDistanceM: c.targetDistanceM,
+                        targetDurationSec: c.targetDurationSec,
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-full bg-surfaceRaised px-3 py-2 text-sm text-text transition hover:bg-white/5 active:scale-95"
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Agregar cardio suelto */}
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-textMuted">Cardio</h3>
+          <h3 className="mb-2 text-sm font-semibold text-textMuted">Cardio suelto</h3>
           <div className="flex flex-wrap gap-1.5">
             {ACTIVITY_TYPES.map((t) => {
               const Icon = activityIcon(t);
@@ -287,14 +335,18 @@ function DraftIcon({ d }: { d: Draft }) {
 function draftTitle(d: Draft): string {
   if (d.kind === 'REST') return 'Descanso';
   if (d.kind === 'ROUTINE') return d.routineName ?? 'Rutina';
+  if (d.cardioRoutineName) return d.cardioRoutineName;
   return d.activityType ? activityLabel(d.activityType) : 'Cardio';
 }
 
 function draftSubtitle(d: Draft): string {
   if (d.kind !== 'ACTIVITY' || !d.activityType) return '';
   return [
+    // con plantilla, el tipo pasa al subtítulo (el título es el nombre)
+    d.cardioRoutineName ? activityLabel(d.activityType) : '',
     d.targetDistanceM ? formatDistance(d.targetDistanceM, d.activityType) : '',
     d.targetDurationSec ? formatDuration(d.targetDurationSec) : '',
+    d.cardioSummary ?? '',
   ]
     .filter(Boolean)
     .join(' · ');

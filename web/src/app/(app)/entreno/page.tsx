@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, GripVertical, Loader2, Plus, Waves } from 'lucide-react';
+import {
+  ArrowRight,
+  Dumbbell,
+  GripVertical,
+  Loader2,
+  Moon,
+  Plus,
+  Waves,
+} from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -23,8 +31,14 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ExerciseCard } from '@/components/workout/exercise-card';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
-import { ActivityForm } from '@/components/activity/activity-form';
+import { ActivityForm, type ActivityPrefill } from '@/components/activity/activity-form';
+import { startRoutine } from '@/lib/routines';
+import { getPlans, itemTargets, type PlanItem, type WeeklyPlan } from '@/lib/plans';
+import { activityIcon, activityLabel, formatDistance } from '@/lib/activity';
+import { formatDuration } from '@/lib/format';
+import { todayDow } from '@/lib/week';
 import { FinishSummary } from '@/components/workout/finish-summary';
+import { SettingsButton } from '@/components/nav/settings-button';
 import { WorkoutHeader } from '@/components/workout/workout-header';
 import { useActiveWorkout } from '@/hooks/use-active-workout';
 import { useRestTimerCtx } from '@/components/rest-timer-provider';
@@ -55,6 +69,43 @@ export default function EntrenoPage() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [removeExId, setRemoveExId] = useState<string | null>(null);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [activityPrefill, setActivityPrefill] = useState<ActivityPrefill | null>(null);
+  const [activePlan, setActivePlan] = useState<WeeklyPlan | null>(null);
+  const [startingRoutine, setStartingRoutine] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
+  // Plan activo → "hoy toca"
+  useEffect(() => {
+    getPlans()
+      .then((ps) => setActivePlan(ps.find((p) => p.active) ?? ps[0] ?? null))
+      .catch(() => {});
+  }, []);
+
+  async function onStartPlanRoutine(routineId: string) {
+    if (startingRoutine) return;
+    setPlanError(null);
+    setStartingRoutine(true);
+    try {
+      await startRoutine(routineId);
+      await wo.reload(); // el entreno recién creado en el server
+    } catch (e) {
+      setPlanError(e instanceof Error ? e.message : 'No se pudo empezar la rutina.');
+      setStartingRoutine(false);
+    }
+  }
+
+  function openPlanActivity(item: PlanItem) {
+    // con plantilla, el formulario arranca con su nombre y sus intervalos
+    const { type, distanceM, durationSec } = itemTargets(item);
+    setActivityPrefill({
+      type: type ?? undefined,
+      label: item.cardioRoutine?.name ?? null,
+      targetDistanceM: distanceM,
+      targetDurationSec: durationSec,
+      intervals: item.cardioRoutine?.intervals,
+    });
+    setActivityOpen(true);
+  }
 
   const removeExName = wo.workout?.exercises.find((e) => e.id === removeExId)
     ?.exercise.name;
@@ -160,40 +211,125 @@ export default function EntrenoPage() {
 
   // Sin entreno activo → empezar
   if (!wo.workout) {
+    const todayItems = activePlan
+      ? activePlan.items.filter((i) => i.dayOfWeek === todayDow())
+      : [];
+    const hasPlan = todayItems.some((i) => i.kind !== 'REST');
+    const onlyRest = todayItems.length > 0 && !hasPlan;
+
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center px-2 pb-16 text-center">
+      <div className="relative flex min-h-dvh flex-col items-center justify-center px-2 pb-16 text-center">
+        {/* la pantalla vacía no tiene barra propia: el acceso a Ajustes va en la esquina */}
+        <header className="absolute right-0 top-0 pt-safe">
+          <SettingsButton className="mt-6" />
+        </header>
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/15 ring-1 ring-primary/30">
           <Dumbbell className="h-8 w-8 text-primary" />
         </div>
         <BrandMark className="text-3xl" />
         <h1 className="mt-4 font-display text-lg font-semibold text-text">
-          Listo para entrenar
+          {onlyRest ? 'Hoy toca descanso' : 'Listo para entrenar'}
         </h1>
         <p className="mt-1 max-w-[16rem] text-sm text-textMuted">
-          Arrancá un entreno y registrá cada serie en vivo.
+          {onlyRest
+            ? 'Recuperar también es entrenar. Disfrutá el día.'
+            : 'Arrancá un entreno y registrá cada serie en vivo.'}
         </p>
-        <div className="mt-8 w-full max-w-xs space-y-2">
-          <Button onClick={wo.start} loading={wo.starting}>
+
+        {hasPlan && (
+          <div className="mt-6 w-full max-w-xs rounded-2xl bg-surface p-3 text-left shadow-card">
+            <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-textMuted">
+              Hoy toca
+            </p>
+            <div className="space-y-1.5">
+              {todayItems.map((item) => {
+                if (item.kind === 'REST') return null;
+                if (item.kind === 'ROUTINE') {
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        item.routineId && onStartPlanRoutine(item.routineId)
+                      }
+                      disabled={!item.routineId || startingRoutine}
+                      className="flex w-full items-center gap-3 rounded-xl bg-surfaceRaised p-3 transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Dumbbell className="h-5 w-5 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1 truncate font-semibold text-text">
+                        {item.routine?.name ?? 'Rutina eliminada'}
+                      </span>
+                      {startingRoutine ? (
+                        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+                      ) : (
+                        <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  );
+                }
+                const { type, distanceM, durationSec } = itemTargets(item);
+                const Icon = type ? activityIcon(type) : Waves;
+                const target = [
+                  distanceM && type ? formatDistance(distanceM, type) : '',
+                  durationSec ? formatDuration(durationSec) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openPlanActivity(item)}
+                    className="flex w-full items-center gap-3 rounded-xl bg-surfaceRaised p-3 transition active:scale-[0.98]"
+                  >
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      <span className="font-semibold text-text">
+                        {item.cardioRoutine?.name ??
+                          (type ? activityLabel(type) : 'Cardio')}
+                      </span>
+                      {target && <span className="text-textMuted"> · {target}</span>}
+                    </span>
+                    <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 w-full max-w-xs space-y-2">
+          <Button onClick={wo.start} loading={wo.starting} variant={hasPlan ? 'ghost' : 'primary'}>
             <Plus className="h-5 w-5" />
-            Empezar entreno
+            {hasPlan ? 'Entreno libre' : 'Empezar entreno'}
           </Button>
           <button
             type="button"
-            onClick={() => setActivityOpen(true)}
+            onClick={() => {
+              setActivityPrefill(null);
+              setActivityOpen(true);
+            }}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-surfaceRaised font-semibold text-text transition hover:bg-white/5 active:scale-[0.98]"
           >
             <Waves className="h-5 w-5 text-primary" />
             Registrar actividad
           </button>
         </div>
-        {wo.error && <p className="mt-3 text-sm text-danger">{wo.error}</p>}
+        {(wo.error || planError) && (
+          <p className="mt-3 text-sm text-danger">{planError ?? wo.error}</p>
+        )}
 
         {activityOpen && (
           <ActivityForm
             initial={null}
-            onClose={() => setActivityOpen(false)}
+            prefill={activityPrefill ?? undefined}
+            onClose={() => {
+              setActivityOpen(false);
+              setActivityPrefill(null);
+            }}
             onSaved={() => {
               setActivityOpen(false);
+              setActivityPrefill(null);
               toast.success('Actividad guardada.');
             }}
           />

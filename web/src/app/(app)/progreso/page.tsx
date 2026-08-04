@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { CalendarHeatmap } from '@/components/progress/calendar-heatmap';
+import { PlanWeekProgress } from '@/components/progress/plan-week-progress';
 import { LifetimeStats } from '@/components/progress/lifetime-stats';
 import { MuscleMap } from '@/components/progress/muscle-map';
 import { BodyweightChart } from '@/components/progress/bodyweight-chart';
 import { VolumeChart, type VolumePoint } from '@/components/progress/volume-chart';
 import { ErrorState } from '@/components/ui/error-state';
+import { SettingsButton } from '@/components/nav/settings-button';
 import {
   ExerciseProgress,
   type ExerciseOption,
@@ -51,8 +53,9 @@ export default function ProgresoPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="pt-safe">
+      <header className="flex items-center justify-between pt-safe">
         <h1 className="pt-6 font-display text-2xl font-bold text-text">Progreso</h1>
+        <SettingsButton className="mt-6" />
       </header>
 
       {status === 'error' ? (
@@ -64,6 +67,7 @@ export default function ProgresoPage() {
       ) : (
         <div className="mt-4 space-y-3">
           <CalendarHeatmap />
+          <PlanWeekProgress />
           <LifetimeStats />
           <MuscleMap />
           <BodyweightChart />

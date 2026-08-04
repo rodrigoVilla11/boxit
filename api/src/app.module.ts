@@ -12,6 +12,7 @@ import { WorkoutsModule } from './workouts/workouts.module';
 import { RoutinesModule } from './routines/routines.module';
 import { BodyweightModule } from './bodyweight/bodyweight.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { CardioRoutinesModule } from './cardio-routines/cardio-routines.module';
 import { PlansModule } from './plans/plans.module';
 import { TasksModule } from './tasks/tasks.module';
 
@@ -33,6 +34,7 @@ import { TasksModule } from './tasks/tasks.module';
     RoutinesModule,
     BodyweightModule,
     ActivitiesModule,
+    CardioRoutinesModule,
     PlansModule,
     TasksModule,
   ],

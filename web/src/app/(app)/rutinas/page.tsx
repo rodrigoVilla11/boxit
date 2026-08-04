@@ -12,17 +12,32 @@ import {
   Play,
   Plus,
   Trash2,
+  Waves,
 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PromptDialog } from '@/components/ui/prompt-dialog';
 import { ErrorState } from '@/components/ui/error-state';
+import { SettingsButton } from '@/components/nav/settings-button';
 import { PlanWeek } from '@/components/plans/plan-week';
 import { DayEditor } from '@/components/plans/day-editor';
 import { useToast } from '@/components/toast-provider';
 import { cn } from '@/lib/cn';
 import { plural } from '@/lib/plural';
+import { computeCompletion } from '@/lib/plan-completion';
+import { ActivityForm, type ActivityPrefill } from '@/components/activity/activity-form';
+import { CardioRoutineForm } from '@/components/cardio/cardio-routine-form';
 import { deleteRoutine, getRoutines, startRoutine, type Routine } from '@/lib/routines';
+import { getHistory, type WorkoutSummary } from '@/lib/workouts';
+import { getActivities, type Activity } from '@/lib/activities';
+import { activityIcon, activityLabel, formatDistance } from '@/lib/activity';
+import { formatDuration } from '@/lib/format';
+import {
+  deleteCardioRoutine,
+  getCardioRoutines,
+  intervalsSummary,
+  type CardioRoutine,
+} from '@/lib/cardio-routines';
 import {
   activatePlan,
   createPlan,
@@ -37,10 +52,20 @@ export default function RutinasPage() {
   const toast = useToast();
   const [routines, setRoutines] = useState<Routine[] | null>(null);
   const [plans, setPlans] = useState<WeeklyPlan[] | null>(null);
+  const [history, setHistory] = useState<WorkoutSummary[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Routine | null>(null);
+
+  // plantillas de cardio
+  const [cardio, setCardio] = useState<CardioRoutine[]>([]);
+  const [cardioForm, setCardioForm] = useState<null | { initial: CardioRoutine | null }>(
+    null,
+  );
+  const [cardioToDelete, setCardioToDelete] = useState<CardioRoutine | null>(null);
+  const [cardioPrefill, setCardioPrefill] = useState<ActivityPrefill | null>(null);
 
   // estado del plan
   const [editingDay, setEditingDay] = useState<number | null>(null);
@@ -51,12 +76,16 @@ export default function RutinasPage() {
     setLoadError(false);
     setRoutines(null);
     setPlans(null);
-    Promise.all([getRoutines(), getPlans()])
-      .then(([r, p]) => {
+    Promise.all([getRoutines(), getPlans(), getCardioRoutines()])
+      .then(([r, p, c]) => {
         setRoutines(r);
         setPlans(p);
+        setCardio(c);
       })
       .catch(() => setLoadError(true));
+    // para el ✓ de cumplimiento (no crítico)
+    getHistory().then(setHistory).catch(() => {});
+    getActivities().then(setActivities).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -66,6 +95,10 @@ export default function RutinasPage() {
   const activePlan = useMemo(
     () => plans?.find((p) => p.active) ?? plans?.[0] ?? null,
     [plans],
+  );
+  const completion = useMemo(
+    () => computeCompletion(activePlan, history, activities),
+    [activePlan, history, activities],
   );
 
   async function onStart(routine: Routine) {
@@ -92,6 +125,32 @@ export default function RutinasPage() {
     } catch {
       load();
     }
+  }
+
+  // --- acciones de plantillas de cardio ---
+  async function onDeleteCardio() {
+    if (!cardioToDelete) return;
+    const id = cardioToDelete.id;
+    setCardioToDelete(null);
+    setCardio((cs) => cs.filter((c) => c.id !== id));
+    try {
+      await deleteCardioRoutine(id);
+      // pudo estar referenciada en el plan: el ítem queda sin plantilla
+      getPlans().then(setPlans).catch(() => {});
+    } catch {
+      load();
+    }
+  }
+
+  /** Registrar una actividad partiendo de la plantilla (tipo, objetivo e intervalos). */
+  function onUseCardio(c: CardioRoutine) {
+    setCardioPrefill({
+      type: c.type,
+      label: c.name,
+      targetDistanceM: c.targetDistanceM,
+      targetDurationSec: c.targetDurationSec,
+      intervals: c.intervals,
+    });
   }
 
   // --- acciones de plan ---
@@ -136,8 +195,9 @@ export default function RutinasPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="pt-safe">
+      <header className="flex items-center justify-between pt-safe">
         <h1 className="pt-6 font-display text-2xl font-bold text-text">Rutinas</h1>
+        <SettingsButton className="mt-6" />
       </header>
 
       {startError && (
@@ -236,7 +296,11 @@ export default function RutinasPage() {
                         </MenuItem>
                       </Menu>
                     </div>
-                    <PlanWeek plan={activePlan} onEditDay={(d) => setEditingDay(d)} />
+                    <PlanWeek
+                      plan={activePlan}
+                      completion={completion.byDow}
+                      onEditDay={(d) => setEditingDay(d)}
+                    />
                   </>
                 )}
               </>
@@ -271,7 +335,66 @@ export default function RutinasPage() {
               ))
             )}
           </section>
+
+          {/* Plantillas de cardio */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-text">Rutinas de cardio</h2>
+              <button
+                type="button"
+                onClick={() => setCardioForm({ initial: null })}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95"
+              >
+                <Plus className="h-4 w-4" />
+                Crear
+              </button>
+            </div>
+            {cardio.length === 0 ? (
+              <EmptyCardio />
+            ) : (
+              cardio.map((c) => (
+                <CardioCard
+                  key={c.id}
+                  routine={c}
+                  onUse={() => onUseCardio(c)}
+                  onEdit={() => setCardioForm({ initial: c })}
+                  onDelete={() => setCardioToDelete(c)}
+                />
+              ))
+            )}
+          </section>
         </div>
+      )}
+
+      {cardioForm && (
+        <CardioRoutineForm
+          initial={cardioForm.initial}
+          onClose={() => setCardioForm(null)}
+          onSaved={(saved) => {
+            setCardio((cs) =>
+              cs.some((c) => c.id === saved.id)
+                ? cs.map((c) => (c.id === saved.id ? saved : c))
+                : [saved, ...cs],
+            );
+            setCardioForm(null);
+            // el plan copia tipo y objetivos de la plantilla: refrescamos
+            getPlans().then(setPlans).catch(() => {});
+            toast.success('Plantilla guardada.');
+          }}
+        />
+      )}
+
+      {cardioPrefill && (
+        <ActivityForm
+          initial={null}
+          prefill={cardioPrefill}
+          onClose={() => setCardioPrefill(null)}
+          onSaved={() => {
+            setCardioPrefill(null);
+            toast.success('Actividad guardada.');
+            getActivities().then(setActivities).catch(() => {});
+          }}
+        />
       )}
 
       {editingDay !== null && activePlan && (
@@ -279,6 +402,7 @@ export default function RutinasPage() {
           plan={activePlan}
           day={editingDay}
           routines={routines ?? []}
+          cardioRoutines={cardio}
           onClose={() => setEditingDay(null)}
           onSaved={(p) => {
             setPlans((prev) => (prev ? prev.map((x) => (x.id === p.id ? p : x)) : prev));
@@ -323,6 +447,16 @@ export default function RutinasPage() {
         danger
         onConfirm={onDelete}
         onCancel={() => setToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={cardioToDelete !== null}
+        title="¿Eliminar la plantilla?"
+        message={`Se va a eliminar "${cardioToDelete?.name ?? ''}". Los días del plan que la usaban conservan el objetivo, y tus actividades registradas no se tocan.`}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={onDeleteCardio}
+        onCancel={() => setCardioToDelete(null)}
       />
     </div>
   );
@@ -391,6 +525,93 @@ function RoutineCard({
         Empezar entreno
       </button>
     </section>
+  );
+}
+
+function CardioCard({
+  routine,
+  onUse,
+  onEdit,
+  onDelete,
+}: {
+  routine: CardioRoutine;
+  onUse: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const Icon = activityIcon(routine.type);
+  const target = [
+    routine.targetDistanceM
+      ? formatDistance(routine.targetDistanceM, routine.type)
+      : '',
+    routine.targetDurationSec ? formatDuration(routine.targetDurationSec) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const detail = intervalsSummary(routine.intervals);
+
+  return (
+    <section className="rounded-2xl bg-surface p-4 shadow-card">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-primary">
+            <Icon className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-lg font-semibold text-text">
+              {routine.name}
+            </h3>
+            <p className="text-xs text-textMuted">
+              {activityLabel(routine.type)}
+              {target && ` · ${target}`}
+            </p>
+          </div>
+        </div>
+        <Menu
+          label="Opciones de la plantilla"
+          trigger={
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg text-textMuted hover:text-text">
+              <MoreVertical className="h-5 w-5" />
+            </span>
+          }
+        >
+          <MenuItem onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+            Editar plantilla
+          </MenuItem>
+          <MenuItem danger onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+            Eliminar plantilla
+          </MenuItem>
+        </Menu>
+      </div>
+
+      {detail && <p className="mt-2 line-clamp-2 text-sm text-textMuted">{detail}</p>}
+
+      <button
+        type="button"
+        onClick={onUse}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/15 py-2.5 font-semibold text-primary transition hover:bg-primary/25 active:scale-[0.99]"
+      >
+        <Play className="h-5 w-5" />
+        Registrar sesión
+      </button>
+    </section>
+  );
+}
+
+function EmptyCardio() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-10 text-center">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-textMuted">
+        <Waves className="h-6 w-6" />
+      </div>
+      <p className="text-sm font-medium text-text">Sin plantillas de cardio</p>
+      <p className="mt-1 max-w-[17rem] text-sm text-textMuted">
+        Guardá tus sesiones típicas —&nbsp;30 min suaves, 8 × 400 m, 10 km&nbsp;— y
+        usalas en el plan semanal.
+      </p>
+    </div>
   );
 }
 

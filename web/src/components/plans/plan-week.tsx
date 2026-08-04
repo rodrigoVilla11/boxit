@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import { WEEKDAY_LABELS, todayDow } from '@/lib/week';
 import { activityIcon, activityLabel, formatDistance } from '@/lib/activity';
 import { formatDuration } from '@/lib/format';
-import type { PlanItem, WeeklyPlan } from '@/lib/plans';
+import { itemTargets, type PlanItem, type WeeklyPlan } from '@/lib/plans';
 
 export function PlanWeek({
   plan,
@@ -80,21 +80,22 @@ function ItemLine({ it }: { it: PlanItem }) {
       </span>
     );
   }
-  // ACTIVITY
-  const Icon = it.activityType ? activityIcon(it.activityType) : Dumbbell;
+  // ACTIVITY — con plantilla mostramos su nombre; si no, el tipo
+  const { type, distanceM, durationSec } = itemTargets(it);
+  const Icon = type ? activityIcon(type) : Dumbbell;
   const target = [
-    it.targetDistanceM && it.activityType
-      ? formatDistance(it.targetDistanceM, it.activityType)
-      : '',
-    it.targetDurationSec ? formatDuration(it.targetDurationSec) : '',
+    distanceM && type ? formatDistance(distanceM, type) : '',
+    durationSec ? formatDuration(durationSec) : '',
   ]
     .filter(Boolean)
     .join(' · ');
+  const title =
+    it.cardioRoutine?.name ?? (type ? activityLabel(type) : 'Cardio');
   return (
     <span className="flex items-center gap-1.5 text-sm text-text">
       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
       <span className="truncate">
-        {it.activityType ? activityLabel(it.activityType) : 'Cardio'}
+        {title}
         {target && <span className="text-textMuted"> · {target}</span>}
       </span>
     </span>

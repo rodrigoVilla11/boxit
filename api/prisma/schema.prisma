@@ -76,8 +76,9 @@ model User {
   refreshTokens RefreshToken[]
   exercises     Exercise[]
   bodyweights   Bodyweight[]
-  activities    Activity[]
-  weeklyPlans   WeeklyPlan[]
+  activities     Activity[]
+  weeklyPlans    WeeklyPlan[]
+  cardioRoutines CardioRoutine[]
 }
 
 model RefreshToken {
@@ -247,6 +248,44 @@ model ActivityInterval {
   @@unique([activityId, order])
 }
 
+// ------------------- Plantillas de cardio ------------------------
+// El equivalente a una Routine pero para cardio: una prescripción con nombre
+// reutilizable en el plan semanal. Puede ser continua (sólo objetivo total,
+// "30 min" o "5 km") o por intervalos ("8 × 400 m con 90 s de descanso").
+
+model CardioRoutine {
+  id                String       @id @default(cuid())
+  userId            String
+  name              String
+  type              ActivityType
+  targetDistanceM   Int? // objetivo total (metros), opcional
+  targetDurationSec Int? // objetivo total (segundos), opcional
+  note              String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intervals CardioRoutineInterval[]
+  planItems PlanItem[]
+
+  @@index([userId])
+}
+
+model CardioRoutineInterval {
+  id              String  @id @default(cuid())
+  cardioRoutineId String
+  order           Int
+  label           String?
+  reps            Int     @default(1) // "8 x" => reps 8
+  distanceM       Int? // POR repeticion (metros)
+  durationSec     Int? // POR repeticion (segundos)
+  restSec         Int? // descanso entre repeticiones
+
+  cardioRoutine CardioRoutine @relation(fields: [cardioRoutineId], references: [id], onDelete: Cascade)
+
+  @@unique([cardioRoutineId, order])
+}
+
 // ------------------- Planes semanales de entrenamiento -----------
 // Plan con nombre (varios por usuario, uno activo). Cada dia (0=lunes..6=domingo)
 // tiene items: una rutina de gym, una actividad de cardio planeada, o descanso.
@@ -266,20 +305,23 @@ model WeeklyPlan {
 }
 
 model PlanItem {
-  id               String       @id @default(cuid())
-  planId           String
-  dayOfWeek        Int // 0 = lunes .. 6 = domingo
-  order            Int
-  kind             PlanItemKind
-  routineId        String?
-  activityType     ActivityType?
-  targetDistanceM  Int? // objetivo de distancia (metros)
+  id                String        @id @default(cuid())
+  planId            String
+  dayOfWeek         Int // 0 = lunes .. 6 = domingo
+  order             Int
+  kind              PlanItemKind
+  routineId         String?
+  cardioRoutineId   String? // plantilla de cardio (opcional: el cardio puede ser suelto)
+  activityType      ActivityType?
+  targetDistanceM   Int? // objetivo de distancia (metros)
   targetDurationSec Int? // objetivo de tiempo (segundos)
-  note             String?
+  note              String?
 
   plan    WeeklyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   // Borrar una plantilla no mutila el plan: el item queda con routineId null.
   routine Routine?   @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  // Idem para cardio: el item sobrevive con los objetivos que ya tenía copiados.
+  cardioRoutine CardioRoutine? @relation(fields: [cardioRoutineId], references: [id], onDelete: SetNull)
 
   @@index([planId])
 }

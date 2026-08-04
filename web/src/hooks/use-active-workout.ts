@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/toast-provider';
 import { useSync } from '@/components/sync-provider';
 import * as api from '@/lib/workouts';
@@ -25,6 +25,7 @@ export type UseActiveWorkout = {
   starting: boolean;
   error: string | null;
   start: () => Promise<void>;
+  reload: () => Promise<void>; // re-hidrata (p.ej. tras arrancar una rutina)
   // las mutaciones son local-first: devuelven true si se aplicó al doc local
   addExercise: (exercise: Exercise) => Promise<boolean>;
   removeExercise: (workoutExerciseId: string) => Promise<boolean>;
@@ -48,33 +49,32 @@ export function useActiveWorkout(): UseActiveWorkout {
 
   // Hidratación: el doc local manda. Si no hay doc y no hay cola pendiente,
   // traemos el activo del server (para no resucitar un entreno terminado offline).
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const doc = await loadDoc();
-        if (doc) {
-          if (alive) setWorkout(doc);
+  const hydrate = useCallback(async () => {
+    setLoading(true);
+    try {
+      const doc = await loadDoc();
+      if (doc) {
+        setWorkout(doc);
+      } else {
+        const queue = await getQueue().catch(() => []);
+        if (queue.length === 0 && navigator.onLine) {
+          const server = await api.getActiveWorkout();
+          if (server) await saveDoc(server);
+          setWorkout(server);
         } else {
-          const queue = await getQueue().catch(() => []);
-          if (queue.length === 0 && navigator.onLine) {
-            const server = await api.getActiveWorkout();
-            if (server) await saveDoc(server);
-            if (alive) setWorkout(server);
-          } else if (alive) {
-            setWorkout(null);
-          }
+          setWorkout(null);
         }
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : 'Error');
-      } finally {
-        if (alive) setLoading(false);
       }
-    })();
-    return () => {
-      alive = false;
-    };
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   // Carga el "Anterior" de cada ejercicio (server; offline queda sin dato)
   const exerciseKey = workout
@@ -225,6 +225,7 @@ export function useActiveWorkout(): UseActiveWorkout {
     starting,
     error,
     start,
+    reload: hydrate,
     addExercise,
     removeExercise,
     addSet,

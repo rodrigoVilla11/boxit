@@ -24,8 +24,13 @@ export class PlanItemInput {
   @IsString()
   routineId?: string;
 
-  // activityType es obligatorio sólo si el ítem es una actividad
-  @ValidateIf((o) => o.kind === 'ACTIVITY')
+  // plantilla de cardio (opcional): si viene, el server copia tipo y objetivos
+  @IsOptional()
+  @IsString()
+  cardioRoutineId?: string | null;
+
+  // activityType es obligatorio sólo si el cardio es suelto (sin plantilla)
+  @ValidateIf((o) => o.kind === 'ACTIVITY' && !o.cardioRoutineId)
   @IsEnum(ActivityType, { message: 'Tipo de actividad inválido.' })
   activityType?: ActivityType;
 

@@ -24,6 +24,7 @@ web/public/swe-worker-*.js
 
 # next
 web/next-env.d.ts
+*.tsbuildinfo
 
 # logs / os
 *.log
