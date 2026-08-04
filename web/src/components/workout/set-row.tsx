@@ -8,7 +8,6 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Flame,
   StickyNote,
   Trash2,
   Trophy,
@@ -18,9 +17,22 @@ import { Menu, MenuItem } from '@/components/ui/menu';
 import { useUnit } from '@/components/unit-provider';
 import { PlateCalculator } from './plate-calculator';
 import { displayToKg, kgToDisplay, roundDisplay, weightInputValue } from '@/lib/units';
-import type { PreviousSet, SetPatch, WorkoutSet } from '@/lib/workouts';
+import type { PreviousSet, SetPatch, SetType, WorkoutSet } from '@/lib/workouts';
 
 const RPE_OPTIONS = [6, 7, 8, 9, 10];
+
+// Tipos de serie: badge (letra o número) + color. NORMAL muestra el número de serie.
+const SET_TYPES: {
+  type: SetType;
+  label: string;
+  badge: string;
+  badgeClass: string;
+}[] = [
+  { type: 'NORMAL', label: 'Serie normal', badge: '', badgeClass: 'bg-surfaceRaised text-textMuted' },
+  { type: 'WARMUP', label: 'Calentamiento', badge: 'W', badgeClass: 'bg-accentLime/15 text-accentLime' },
+  { type: 'DROP', label: 'Drop set', badge: 'D', badgeClass: 'bg-amber-400/15 text-amber-400' },
+  { type: 'FAILURE', label: 'Al fallo', badge: 'F', badgeClass: 'bg-danger/15 text-danger' },
+];
 
 const parseFloatSafe = (s: string): number => {
   const n = parseFloat(s.replace(',', '.'));
@@ -38,7 +50,6 @@ export function SetRow({
   isPr = false,
   onSave,
   onRemove,
-  onToggleWarmup,
   onMoveUp,
   onMoveDown,
 }: {
@@ -48,7 +59,6 @@ export function SetRow({
   isPr?: boolean;
   onSave: (setId: string, patch: SetPatch) => void;
   onRemove: (setId: string) => void;
-  onToggleWarmup: (setId: string, warmup: boolean) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }) {
@@ -71,7 +81,7 @@ export function SetRow({
     setNote(set.note ?? '');
   }, [set.note]);
 
-  const isWarmup = set.type === 'WARMUP';
+  const typeMeta = SET_TYPES.find((t) => t.type === set.type) ?? SET_TYPES[0];
   const weightStep = unit === 'LB' ? 5 : 2.5;
 
   // El input está en la unidad de display; guardamos siempre en kg.
@@ -141,12 +151,10 @@ export function SetRow({
             <span
               className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold',
-                isWarmup
-                  ? 'bg-accentLime/15 text-accentLime'
-                  : 'bg-surfaceRaised text-textMuted',
+                typeMeta.badgeClass,
               )}
             >
-              {isWarmup ? 'W' : index + 1}
+              {set.type === 'NORMAL' ? index + 1 : typeMeta.badge}
             </span>
           }
         >
@@ -158,10 +166,14 @@ export function SetRow({
             <Calculator className="h-4 w-4" />
             Calculadora de discos
           </MenuItem>
-          <MenuItem onClick={() => onToggleWarmup(set.id, !isWarmup)}>
-            <Flame className="h-4 w-4" />
-            {isWarmup ? 'Volver a serie normal' : 'Convertir en calentamiento'}
-          </MenuItem>
+          {SET_TYPES.map((t) => (
+            <MenuItem key={t.type} onClick={() => onSave(set.id, { type: t.type })}>
+              <Check
+                className={cn('h-4 w-4', t.type === set.type ? 'opacity-100' : 'opacity-0')}
+              />
+              {t.label}
+            </MenuItem>
+          ))}
           {onMoveUp && (
             <MenuItem onClick={onMoveUp}>
               <ArrowUp className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import type { PersonalRecord, WorkoutSet } from './workouts';
+import { isPrEligible, type PersonalRecord, type WorkoutSet } from './workouts';
 
 /** 1RM estimado (fórmula de Epley). Con 1 rep devuelve el peso tal cual. */
 export function epley1RM(weightKg: number, reps: number): number {
@@ -44,7 +44,7 @@ export function bestPrSetId(
   record: PersonalRecord | undefined,
 ): string | null {
   const done = sets.filter(
-    (s) => s.completed && s.type === 'NORMAL' && s.reps > 0,
+    (s) => s.completed && isPrEligible(s.type) && s.reps > 0,
   );
   if (done.length === 0) return null;
   const withWeight = done.filter((s) => s.weight > 0);

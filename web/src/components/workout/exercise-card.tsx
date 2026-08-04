@@ -24,7 +24,6 @@ export function ExerciseCard({
   onSaveSet,
   onAddSet,
   onRemoveSet,
-  onToggleWarmup,
   onRemoveExercise,
   onReorderSets,
 }: {
@@ -35,7 +34,6 @@ export function ExerciseCard({
   onSaveSet: (setId: string, patch: SetPatch) => void;
   onAddSet: (workoutExerciseId: string) => void;
   onRemoveSet: (setId: string) => void;
-  onToggleWarmup: (setId: string, warmup: boolean) => void;
   onRemoveExercise: (workoutExerciseId: string) => void;
   onReorderSets: (workoutExerciseId: string, ids: string[]) => void;
 }) {
@@ -126,7 +124,6 @@ export function ExerciseCard({
             isPr={set.id === prSetId}
             onSave={onSaveSet}
             onRemove={onRemoveSet}
-            onToggleWarmup={onToggleWarmup}
             onMoveUp={i > 0 ? () => moveSet(set.id, -1) : undefined}
             onMoveDown={
               i < we.sets.length - 1 ? () => moveSet(set.id, 1) : undefined

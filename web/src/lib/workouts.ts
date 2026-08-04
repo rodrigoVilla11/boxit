@@ -1,7 +1,17 @@
 import { apiFetch, extractError, type Exercise } from './api-client';
 
 export type { Exercise };
-export type SetType = 'NORMAL' | 'WARMUP';
+export type SetType = 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE';
+
+/** Criterio único (espeja el back): volumen = todo menos calentamiento. */
+export function isVolumeSet(type: SetType): boolean {
+  return type !== 'WARMUP';
+}
+
+/** Elegible para récord: trabajo real (no calentamiento, no drop). */
+export function isPrEligible(type: SetType): boolean {
+  return type === 'NORMAL' || type === 'FAILURE';
+}
 
 export type WorkoutSet = {
   id: string;
@@ -265,7 +275,7 @@ export async function getPersonalRecords(): Promise<PersonalRecord[]> {
 export function liveTotals(workout: Workout): { volume: number; sets: number } {
   const working = workout.exercises
     .flatMap((e) => e.sets)
-    .filter((s) => s.completed && s.type === 'NORMAL');
+    .filter((s) => s.completed && isVolumeSet(s.type));
   return {
     volume: working.reduce((acc, s) => acc + s.weight * s.reps, 0),
     sets: working.length,

@@ -106,7 +106,8 @@ export class WorkoutsService {
     const sets = await this.prisma.workoutSet.findMany({
       where: {
         completed: true,
-        type: 'NORMAL',
+        // récord: solo series de trabajo real (no calentamiento, no drop)
+        type: { in: ['NORMAL', 'FAILURE'] },
         workoutExercise: {
           workout: { userId, finishedAt: { not: null } },
         },
@@ -192,7 +193,8 @@ export class WorkoutsService {
     const sets = await this.prisma.workoutSet.findMany({
       where: {
         completed: true,
-        type: 'NORMAL',
+        // volumen muscular: todo lo que sea trabajo (no calentamiento)
+        type: { not: 'WARMUP' },
         workoutExercise: {
           workout: { userId, finishedAt: { gte: since } },
         },

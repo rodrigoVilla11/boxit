@@ -37,6 +37,8 @@ enum Equipment {
 enum SetType {
   NORMAL
   WARMUP
+  DROP
+  FAILURE
 }
 
 enum WeightUnit {

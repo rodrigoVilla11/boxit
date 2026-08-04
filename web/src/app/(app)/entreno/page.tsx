@@ -378,9 +378,6 @@ export default function EntrenoPage() {
                     onSaveSet={onSaveSet}
                     onAddSet={wo.addSet}
                     onRemoveSet={wo.removeSet}
-                    onToggleWarmup={(setId, warmup) =>
-                      wo.saveSet(setId, { type: warmup ? 'WARMUP' : 'NORMAL' })
-                    }
                     onRemoveExercise={setRemoveExId}
                     onReorderSets={wo.reorderSets}
                   />
