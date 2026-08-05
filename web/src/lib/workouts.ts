@@ -39,6 +39,8 @@ export type WorkoutExercise = {
 
 export type Workout = {
   id: string;
+  title: string | null;
+  note: string | null;
   startedAt: string;
   finishedAt: string | null;
   durationSec: number;
@@ -46,6 +48,8 @@ export type Workout = {
   totalSets: number;
   exercises: WorkoutExercise[];
 };
+
+export type WorkoutPatch = Partial<{ title: string | null; note: string | null }>;
 
 export type PreviousSet = {
   order: number;
@@ -134,6 +138,18 @@ export async function createWorkout(id?: string): Promise<Workout> {
 export async function finishWorkout(id: string): Promise<Workout> {
   const res = await apiFetch(`/api/workouts/${id}/finish`, { method: 'PATCH' });
   return json<Workout>(res, 'No pudimos terminar el entreno.');
+}
+
+/** Título/nota de la sesión (activo o terminado). */
+export async function updateWorkout(
+  id: string,
+  patch: WorkoutPatch,
+): Promise<Workout> {
+  const res = await apiFetch(`/api/workouts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+  return json<Workout>(res, 'No pudimos guardar la sesión.');
 }
 
 /** Clona un entreno terminado en uno nuevo activo (sin completar). */
@@ -242,6 +258,8 @@ export type WorkoutExerciseSummary = {
 
 export type WorkoutSummary = {
   id: string;
+  title: string | null;
+  note: string | null;
   startedAt: string;
   finishedAt: string | null;
   durationSec: number;

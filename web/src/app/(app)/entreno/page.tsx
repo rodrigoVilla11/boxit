@@ -348,6 +348,7 @@ export default function EntrenoPage() {
         onFinish={onFinish}
         onDiscard={() => setConfirmDiscard(true)}
         onLogout={onLogout}
+        onSaveTitle={(title) => wo.saveWorkout({ title })}
       />
 
       <div className="flex-1 space-y-3 pt-4">

@@ -166,6 +166,8 @@ model RoutineExercise {
 model Workout {
   id          String    @id @default(cuid())
   userId      String
+  title       String? // nombre opcional de la sesión ("Push pesado")
+  note        String? // cómo salió el entreno
   startedAt   DateTime  @default(now())
   finishedAt  DateTime?
   durationSec Int       @default(0)

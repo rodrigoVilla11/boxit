@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Loader2, LogOut, MoreVertical, Timer, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { SettingsButton } from '@/components/nav/settings-button';
@@ -15,17 +16,28 @@ export function WorkoutHeader({
   onFinish,
   onDiscard,
   onLogout,
+  onSaveTitle,
 }: {
   workout: Workout;
   finishing: boolean;
   onFinish: () => void;
   onDiscard: () => void;
   onLogout: () => void;
+  onSaveTitle: (title: string | null) => void;
 }) {
   const now = useNow(1000);
   const { unit } = useUnit();
   const elapsed = Math.floor((now - new Date(workout.startedAt).getTime()) / 1000);
   const totals = liveTotals(workout);
+
+  const [title, setTitle] = useState(workout.title ?? '');
+  useEffect(() => {
+    setTitle(workout.title ?? '');
+  }, [workout.title]);
+  const commitTitle = () => {
+    const t = title.trim();
+    if (t !== (workout.title ?? '')) onSaveTitle(t || null);
+  };
 
   return (
     <header className="sticky top-0 z-20 -mx-4 border-b border-white/5 bg-ink/95 px-4 pb-3 pt-safe backdrop-blur">
@@ -67,7 +79,17 @@ export function WorkoutHeader({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onBlur={commitTitle}
+        placeholder="Ponele un nombre a la sesión…"
+        maxLength={80}
+        aria-label="Nombre del entreno"
+        className="mt-2 w-full bg-transparent font-display text-base font-semibold text-text outline-none placeholder:font-sans placeholder:text-sm placeholder:font-normal placeholder:text-textMuted/60"
+      />
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <Metric label="Volumen" value={formatVolume(totals.volume, unit)} />
         <Metric label="Series" value={String(totals.sets)} />
       </div>

@@ -53,6 +53,8 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
       if (doc && doc.finishedAt === null) return doc;
       return {
         id: op.workoutId,
+        title: null,
+        note: null,
         startedAt: new Date().toISOString(),
         finishedAt: null,
         durationSec: 0,
@@ -93,6 +95,12 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
             ? { ...e, sets: [...e.sets, freshSet(op.setId, nextOrder(e.sets))] }
             : e,
         ),
+      };
+    case 'updateWorkout':
+      return {
+        ...doc,
+        ...(op.patch.title !== undefined ? { title: op.patch.title } : {}),
+        ...(op.patch.note !== undefined ? { note: op.patch.note } : {}),
       };
     case 'updateSet':
       return {

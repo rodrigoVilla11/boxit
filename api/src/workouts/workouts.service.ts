@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
+import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { computeDurationSec, computeWorkoutTotals } from './workouts.calc';
 
 // Entreno con ejercicios (ordenados) y sus series (ordenadas).
@@ -242,6 +243,20 @@ export class WorkoutsService {
 
   async getOne(userId: string, id: string): Promise<FullWorkout> {
     await this.assertOwner(userId, id);
+    return this.findFull(id);
+  }
+
+  /** Título y/o nota de la sesión (editable en activo o terminado). */
+  async updateWorkout(
+    userId: string,
+    id: string,
+    dto: UpdateWorkoutDto,
+  ): Promise<FullWorkout> {
+    await this.assertOwner(userId, id);
+    const data: Prisma.WorkoutUpdateInput = {};
+    if (dto.title !== undefined) data.title = dto.title?.trim() || null;
+    if (dto.note !== undefined) data.note = dto.note?.trim() || null;
+    await this.prisma.workout.update({ where: { id }, data });
     return this.findFull(id);
   }
 

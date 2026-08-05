@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/toast-provider';
 import { useSync } from '@/components/sync-provider';
 import * as api from '@/lib/workouts';
-import type { Exercise, PreviousSession, SetPatch, Workout } from '@/lib/workouts';
+import type {
+  Exercise,
+  PreviousSession,
+  SetPatch,
+  Workout,
+  WorkoutPatch,
+} from '@/lib/workouts';
 import { commit, getQueue, loadDoc, saveDoc } from '@/lib/offline/active-store';
 import type { Op } from '@/lib/offline/types';
 
@@ -32,6 +38,7 @@ export type UseActiveWorkout = {
   addSet: (workoutExerciseId: string) => Promise<boolean>;
   removeSet: (setId: string) => Promise<boolean>;
   saveSet: (setId: string, patch: SetPatch) => Promise<boolean>;
+  saveWorkout: (patch: WorkoutPatch) => Promise<boolean>;
   reorderExercises: (ids: string[]) => Promise<boolean>;
   reorderSets: (workoutExerciseId: string, ids: string[]) => Promise<boolean>;
   finish: () => Promise<Workout | null>;
@@ -162,6 +169,9 @@ export function useActiveWorkout(): UseActiveWorkout {
   const saveSet = (setId: string, patch: SetPatch) =>
     runCommit({ kind: 'updateSet', workoutId: guardedId(), setId, patch, ts: now() });
 
+  const saveWorkout = (patch: WorkoutPatch) =>
+    runCommit({ kind: 'updateWorkout', workoutId: guardedId(), patch, ts: now() });
+
   const reorderExercises = (ids: string[]) =>
     runCommit({ kind: 'reorderExercises', workoutId: guardedId(), ids, ts: now() });
 
@@ -231,6 +241,7 @@ export function useActiveWorkout(): UseActiveWorkout {
     addSet,
     removeSet,
     saveSet,
+    saveWorkout,
     reorderExercises,
     reorderSets,
     finish,

@@ -1,4 +1,4 @@
-import type { Exercise, SetPatch } from '../workouts';
+import type { Exercise, SetPatch, WorkoutPatch } from '../workouts';
 
 // Intents que se aplican al doc local y se encolan para replay en el server.
 // El store les inyecta `seq` (auto-increment) para ordenarlos y borrarlos.
@@ -15,6 +15,7 @@ export type Op =
   | { kind: 'removeExercise'; workoutId: string; weId: string; ts: number }
   | { kind: 'addSet'; workoutId: string; weId: string; setId: string; ts: number }
   | { kind: 'updateSet'; workoutId: string; setId: string; patch: SetPatch; ts: number }
+  | { kind: 'updateWorkout'; workoutId: string; patch: WorkoutPatch; ts: number }
   | { kind: 'removeSet'; workoutId: string; setId: string; ts: number }
   | { kind: 'reorderExercises'; workoutId: string; ids: string[]; ts: number }
   | { kind: 'reorderSets'; workoutId: string; weId: string; ids: string[]; ts: number }

@@ -73,6 +73,9 @@ export async function syncOp(op: QueuedOp): Promise<void> {
     case 'updateSet':
       await api.updateSet(op.workoutId, op.setId, op.patch);
       return;
+    case 'updateWorkout':
+      await api.updateWorkout(op.workoutId, op.patch);
+      return;
     case 'removeSet':
       await api.removeSet(op.workoutId, op.setId);
       return;

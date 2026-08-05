@@ -131,9 +131,16 @@ export default function SessionDetailPage() {
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
-        <h1 className="mt-5 font-display text-xl font-bold text-text">
-          {formatSessionDate(workout.finishedAt)}
-        </h1>
+        <div className="mt-5">
+          <h1 className="font-display text-xl font-bold text-text">
+            {workout.title || formatSessionDate(workout.finishedAt)}
+          </h1>
+          {workout.title && (
+            <p className="text-xs text-textMuted">
+              {formatSessionDate(workout.finishedAt)}
+            </p>
+          )}
+        </div>
       </header>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -141,6 +148,12 @@ export default function SessionDetailPage() {
         <Metric label="Duración" value={formatDuration(workout.durationSec)} />
         <Metric label="Series" value={String(workout.totalSets)} />
       </div>
+
+      {workout.note && (
+        <p className="mt-3 whitespace-pre-wrap rounded-2xl bg-surface px-3 py-2.5 text-sm text-textMuted">
+          {workout.note}
+        </p>
+      )}
 
       <div className="mt-4 space-y-3">
         {workout.exercises.map((we) => {

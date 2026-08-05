@@ -178,8 +178,13 @@ function SessionCard({ workout }: { workout: WorkoutSummary }) {
     >
       <div className="min-w-0 flex-1">
         <p className="font-display text-base font-semibold text-text">
-          {formatSessionDate(workout.finishedAt)}
+          {workout.title || formatSessionDate(workout.finishedAt)}
         </p>
+        {workout.title && (
+          <p className="text-xs text-textMuted">
+            {formatSessionDate(workout.finishedAt)}
+          </p>
+        )}
         <p className="mt-0.5 line-clamp-1 text-sm text-textMuted">
           {preview || 'Sin ejercicios'}
         </p>

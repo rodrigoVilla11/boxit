@@ -17,6 +17,7 @@ import { WorkoutsService } from './workouts.service';
 import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
+import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { ReorderDto } from './dto/reorder.dto';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
@@ -62,6 +63,15 @@ export class WorkoutsController {
   @Patch(':id/finish')
   finish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.workouts.finish(user.id, id);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateWorkoutDto,
+  ) {
+    return this.workouts.updateWorkout(user.id, id, dto);
   }
 
   @Post(':id/repeat')
