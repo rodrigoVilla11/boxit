@@ -8,9 +8,11 @@ RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable
 WORKDIR /repo
 
-# Copiamos manifiestos primero para cachear la instalación
+# Copiamos TODOS los manifiestos del workspace primero (pnpm necesita el grafo
+# completo aunque instalemos sólo la API) para cachear la instalación.
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY api/package.json ./api/package.json
+COPY web/package.json ./web/package.json
 
 RUN pnpm install --frozen-lockfile
 
@@ -20,10 +22,11 @@ COPY api ./api
 RUN pnpm --filter @box-it/api exec prisma generate
 RUN pnpm --filter @box-it/api build
 
-# Bundle prod autocontenido en /out (node_modules aplanado, solo deps de prod)
-RUN pnpm --filter @box-it/api deploy --prod /out
-# El cliente Prisma generado no viene en el install de prod: lo copiamos
-RUN cp -R /repo/api/node_modules/.prisma /out/node_modules/.prisma
+# Bundle prod autocontenido en /out (node_modules aplanado, solo deps de prod).
+# --legacy: pnpm v10+ exige inject-workspace-packages salvo con este flag.
+RUN pnpm --filter @box-it/api deploy --prod --legacy /out
+# Regeneramos el cliente Prisma dentro de /out (el generado no viaja con deploy)
+RUN cd /out && node node_modules/prisma/build/index.js generate
 
 # ---------- runner ----------
 FROM node:22-alpine AS runner

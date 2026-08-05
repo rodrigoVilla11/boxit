@@ -1,0 +1,28 @@
+# Nunca copiar node_modules del host (Windows) al build: pnpm los instala en la
+# imagen (Linux). Sin esto, COPY api/web pisa los node_modules correctos.
+**/node_modules
+node_modules
+
+# Builds y artefactos
+**/.next
+**/dist
+**/out
+**/build
+**/.turbo
+web/public/sw.js
+web/public/sw.js.map
+web/public/swe-worker-*.js
+**/*.tsbuildinfo
+
+# Git / env / logs / editor
+.git
+.gitignore
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.vscode
+.idea
+.claude
+DEPLOY.md
+README.md
