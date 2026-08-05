@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { History, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { History, MoreVertical, Plus, Replace, Trash2 } from 'lucide-react';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ExerciseHistorySheet } from '@/components/progress/exercise-history-sheet';
 import { SetRow } from './set-row';
@@ -25,6 +25,7 @@ export function ExerciseCard({
   onAddSet,
   onRemoveSet,
   onRemoveExercise,
+  onReplaceExercise,
   onReorderSets,
 }: {
   we: WorkoutExercise;
@@ -35,6 +36,7 @@ export function ExerciseCard({
   onAddSet: (workoutExerciseId: string) => void;
   onRemoveSet: (setId: string) => void;
   onRemoveExercise: (workoutExerciseId: string) => void;
+  onReplaceExercise: (workoutExerciseId: string) => void;
   onReorderSets: (workoutExerciseId: string, ids: string[]) => void;
 }) {
   const { unit } = useUnit();
@@ -110,6 +112,10 @@ export function ExerciseCard({
           <MenuItem onClick={() => setHistoryOpen(true)}>
             <History className="h-4 w-4" />
             Ver historial
+          </MenuItem>
+          <MenuItem onClick={() => onReplaceExercise(we.id)}>
+            <Replace className="h-4 w-4" />
+            Reemplazar ejercicio
           </MenuItem>
           <MenuItem danger onClick={() => onRemoveExercise(we.id)}>
             <Trash2 className="h-4 w-4" />

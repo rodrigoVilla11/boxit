@@ -10,6 +10,7 @@ import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
+import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
 import { computeDurationSec, computeWorkoutTotals } from './workouts.calc';
 
 // Entreno con ejercicios (ordenados) y sus series (ordenadas).
@@ -380,6 +381,47 @@ export class WorkoutsService {
     await this.assertActive(userId, workoutId);
     await this.assertWorkoutExercise(workoutId, workoutExerciseId);
     await this.prisma.workoutExercise.delete({ where: { id: workoutExerciseId } });
+    return this.findFull(workoutId);
+  }
+
+  /**
+   * Reemplaza el ejercicio de un slot manteniendo su posición (order). Las series
+   * y los objetivos del movimiento viejo no aplican al nuevo: se resetean a una
+   * serie vacía y targets en null.
+   */
+  async replaceExercise(
+    userId: string,
+    workoutId: string,
+    workoutExerciseId: string,
+    dto: ReplaceExerciseDto,
+  ): Promise<FullWorkout> {
+    await this.assertActive(userId, workoutId);
+    await this.assertWorkoutExercise(workoutId, workoutExerciseId);
+    const exercise = await this.prisma.exercise.findUnique({
+      where: { id: dto.exerciseId },
+    });
+    if (!exercise) throw new NotFoundException('Ejercicio no encontrado.');
+    await this.prisma.workoutExercise.update({
+      where: { id: workoutExerciseId },
+      data: {
+        exerciseId: dto.exerciseId,
+        targetReps: null,
+        targetWeight: null,
+        restSeconds: null,
+        sets: {
+          deleteMany: {},
+          create: [
+            {
+              ...(dto.setId ? { id: dto.setId } : {}),
+              order: 1,
+              type: 'NORMAL',
+              weight: 0,
+              reps: 0,
+            },
+          ],
+        },
+      },
+    });
     return this.findFull(workoutId);
   }
 

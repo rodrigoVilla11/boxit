@@ -64,6 +64,8 @@ export default function EntrenoPage() {
   useWakeLock(!!wo.workout);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  // si está seteado, el picker reemplaza ese ejercicio en vez de agregar uno
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [summary, setSummary] = useState<Workout | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -380,6 +382,10 @@ export default function EntrenoPage() {
                     onAddSet={wo.addSet}
                     onRemoveSet={wo.removeSet}
                     onRemoveExercise={setRemoveExId}
+                    onReplaceExercise={(weId) => {
+                      setReplaceTarget(weId);
+                      setPickerOpen(true);
+                    }}
                     onReorderSets={wo.reorderSets}
                   />
                 ))}
@@ -401,9 +407,17 @@ export default function EntrenoPage() {
 
       <ExercisePicker
         open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        onClose={() => {
+          setPickerOpen(false);
+          setReplaceTarget(null);
+        }}
         onPick={async (ex) => {
-          await wo.addExercise(ex);
+          if (replaceTarget) {
+            await wo.replaceExercise(replaceTarget, ex);
+            setReplaceTarget(null);
+          } else {
+            await wo.addExercise(ex);
+          }
         }}
       />
 

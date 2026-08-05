@@ -87,6 +87,23 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
     }
     case 'removeExercise':
       return { ...doc, exercises: doc.exercises.filter((e) => e.id !== op.weId) };
+    case 'replaceExercise':
+      return {
+        ...doc,
+        exercises: doc.exercises.map((e) =>
+          e.id === op.weId
+            ? {
+                ...e,
+                exerciseId: op.exercise.id,
+                exercise: op.exercise,
+                targetReps: null,
+                targetWeight: null,
+                restSeconds: null,
+                sets: [freshSet(op.setId, 1)],
+              }
+            : e,
+        ),
+      };
     case 'addSet':
       return {
         ...doc,

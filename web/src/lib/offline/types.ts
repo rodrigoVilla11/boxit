@@ -13,6 +13,14 @@ export type Op =
       ts: number;
     }
   | { kind: 'removeExercise'; workoutId: string; weId: string; ts: number }
+  | {
+      kind: 'replaceExercise';
+      workoutId: string;
+      weId: string;
+      setId: string;
+      exercise: Exercise;
+      ts: number;
+    }
   | { kind: 'addSet'; workoutId: string; weId: string; setId: string; ts: number }
   | { kind: 'updateSet'; workoutId: string; setId: string; patch: SetPatch; ts: number }
   | { kind: 'updateWorkout'; workoutId: string; patch: WorkoutPatch; ts: number }

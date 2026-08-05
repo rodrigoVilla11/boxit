@@ -35,6 +35,7 @@ export type UseActiveWorkout = {
   // las mutaciones son local-first: devuelven true si se aplicó al doc local
   addExercise: (exercise: Exercise) => Promise<boolean>;
   removeExercise: (workoutExerciseId: string) => Promise<boolean>;
+  replaceExercise: (workoutExerciseId: string, exercise: Exercise) => Promise<boolean>;
   addSet: (workoutExerciseId: string) => Promise<boolean>;
   removeSet: (setId: string) => Promise<boolean>;
   saveSet: (setId: string, patch: SetPatch) => Promise<boolean>;
@@ -154,6 +155,16 @@ export function useActiveWorkout(): UseActiveWorkout {
       ts: now(),
     });
 
+  const replaceExercise = (workoutExerciseId: string, exercise: Exercise) =>
+    runCommit({
+      kind: 'replaceExercise',
+      workoutId: guardedId(),
+      weId: workoutExerciseId,
+      setId: uuid(),
+      exercise,
+      ts: now(),
+    });
+
   const addSet = (workoutExerciseId: string) =>
     runCommit({
       kind: 'addSet',
@@ -238,6 +249,7 @@ export function useActiveWorkout(): UseActiveWorkout {
     reload: hydrate,
     addExercise,
     removeExercise,
+    replaceExercise,
     addSet,
     removeSet,
     saveSet,

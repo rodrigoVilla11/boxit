@@ -186,6 +186,19 @@ export async function removeExercise(
   return json<Workout>(res, 'No pudimos quitar el ejercicio.');
 }
 
+export async function replaceExercise(
+  id: string,
+  workoutExerciseId: string,
+  exerciseId: string,
+  ids?: { setId?: string },
+): Promise<Workout> {
+  const res = await apiFetch(
+    `/api/workouts/${id}/exercises/${workoutExerciseId}/replace`,
+    { method: 'PATCH', body: JSON.stringify({ exerciseId, ...ids }) },
+  );
+  return json<Workout>(res, 'No pudimos reemplazar el ejercicio.');
+}
+
 export async function addSet(
   id: string,
   workoutExerciseId: string,

@@ -18,6 +18,7 @@ import { AddExerciseDto } from './dto/add-exercise.dto';
 import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
+import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
 import { ReorderDto } from './dto/reorder.dto';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
@@ -120,6 +121,16 @@ export class WorkoutsController {
     @Param('workoutExerciseId') workoutExerciseId: string,
   ) {
     return this.workouts.removeExercise(user.id, id, workoutExerciseId);
+  }
+
+  @Patch(':id/exercises/:workoutExerciseId/replace')
+  replaceExercise(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+    @Body() dto: ReplaceExerciseDto,
+  ) {
+    return this.workouts.replaceExercise(user.id, id, workoutExerciseId, dto);
   }
 
   @Post(':id/exercises/:workoutExerciseId/sets')
