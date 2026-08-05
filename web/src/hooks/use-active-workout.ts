@@ -40,6 +40,7 @@ export type UseActiveWorkout = {
   removeSet: (setId: string) => Promise<boolean>;
   saveSet: (setId: string, patch: SetPatch) => Promise<boolean>;
   saveWorkout: (patch: WorkoutPatch) => Promise<boolean>;
+  setSuperset: (workoutExerciseId: string, group: number | null) => Promise<boolean>;
   reorderExercises: (ids: string[]) => Promise<boolean>;
   reorderSets: (workoutExerciseId: string, ids: string[]) => Promise<boolean>;
   finish: () => Promise<Workout | null>;
@@ -183,6 +184,15 @@ export function useActiveWorkout(): UseActiveWorkout {
   const saveWorkout = (patch: WorkoutPatch) =>
     runCommit({ kind: 'updateWorkout', workoutId: guardedId(), patch, ts: now() });
 
+  const setSuperset = (workoutExerciseId: string, group: number | null) =>
+    runCommit({
+      kind: 'setSuperset',
+      workoutId: guardedId(),
+      weId: workoutExerciseId,
+      group,
+      ts: now(),
+    });
+
   const reorderExercises = (ids: string[]) =>
     runCommit({ kind: 'reorderExercises', workoutId: guardedId(), ids, ts: now() });
 
@@ -254,6 +264,7 @@ export function useActiveWorkout(): UseActiveWorkout {
     removeSet,
     saveSet,
     saveWorkout,
+    setSuperset,
     reorderExercises,
     reorderSets,
     finish,

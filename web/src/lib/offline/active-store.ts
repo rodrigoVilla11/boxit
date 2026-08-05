@@ -81,6 +81,9 @@ export async function syncOp(op: QueuedOp): Promise<void> {
     case 'updateWorkout':
       await api.updateWorkout(op.workoutId, op.patch);
       return;
+    case 'setSuperset':
+      await api.setSuperset(op.workoutId, op.weId, op.group);
+      return;
     case 'removeSet':
       await api.removeSet(op.workoutId, op.setId);
       return;

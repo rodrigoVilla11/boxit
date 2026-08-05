@@ -24,6 +24,7 @@ export type Op =
   | { kind: 'addSet'; workoutId: string; weId: string; setId: string; ts: number }
   | { kind: 'updateSet'; workoutId: string; setId: string; patch: SetPatch; ts: number }
   | { kind: 'updateWorkout'; workoutId: string; patch: WorkoutPatch; ts: number }
+  | { kind: 'setSuperset'; workoutId: string; weId: string; group: number | null; ts: number }
   | { kind: 'removeSet'; workoutId: string; setId: string; ts: number }
   | { kind: 'reorderExercises'; workoutId: string; ids: string[]; ts: number }
   | { kind: 'reorderSets'; workoutId: string; weId: string; ids: string[]; ts: number }

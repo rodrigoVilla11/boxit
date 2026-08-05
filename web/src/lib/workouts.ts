@@ -30,6 +30,8 @@ export type WorkoutExercise = {
   order: number;
   exerciseId: string;
   exercise: Exercise;
+  // superserie: mismo entero = mismo grupo; null = suelto. Letra derivada en UI.
+  supersetGroup: number | null;
   // objetivos de la rutina (guía); null en alta manual
   targetReps: number | null;
   targetWeight: number | null;
@@ -197,6 +199,18 @@ export async function replaceExercise(
     { method: 'PATCH', body: JSON.stringify({ exerciseId, ...ids }) },
   );
   return json<Workout>(res, 'No pudimos reemplazar el ejercicio.');
+}
+
+export async function setSuperset(
+  id: string,
+  workoutExerciseId: string,
+  group: number | null,
+): Promise<Workout> {
+  const res = await apiFetch(
+    `/api/workouts/${id}/exercises/${workoutExerciseId}/superset`,
+    { method: 'PATCH', body: JSON.stringify({ group }) },
+  );
+  return json<Workout>(res, 'No pudimos agrupar el ejercicio.');
 }
 
 export async function addSet(

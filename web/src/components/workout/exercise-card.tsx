@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { History, MoreVertical, Plus, Replace, Trash2 } from 'lucide-react';
+import { History, Link2, MoreVertical, Plus, Replace, Trash2, Unlink } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ExerciseHistorySheet } from '@/components/progress/exercise-history-sheet';
 import { SetRow } from './set-row';
@@ -9,6 +10,7 @@ import { useUnit } from '@/components/unit-provider';
 import { kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
 import { muscleLabel } from '@/lib/labels';
 import { bestPrSetId } from '@/lib/prs';
+import type { SupersetInfo } from '@/lib/superset';
 import type {
   PersonalRecord,
   PreviousSession,
@@ -27,6 +29,10 @@ export function ExerciseCard({
   onRemoveExercise,
   onReplaceExercise,
   onReorderSets,
+  superset,
+  canGroupNext,
+  onGroupWithNext,
+  onUngroup,
 }: {
   we: WorkoutExercise;
   previous: PreviousSession;
@@ -38,6 +44,10 @@ export function ExerciseCard({
   onRemoveExercise: (workoutExerciseId: string) => void;
   onReplaceExercise: (workoutExerciseId: string) => void;
   onReorderSets: (workoutExerciseId: string, ids: string[]) => void;
+  superset: SupersetInfo;
+  canGroupNext: boolean;
+  onGroupWithNext: (workoutExerciseId: string) => void;
+  onUngroup: (workoutExerciseId: string) => void;
 }) {
   const { unit } = useUnit();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -77,11 +87,22 @@ export function ExerciseCard({
   });
 
   return (
-    <section className="rounded-2xl bg-surface p-3 shadow-card">
+    <section
+      className={cn(
+        'rounded-2xl bg-surface p-3 shadow-card',
+        superset.letter && 'border-l-4 border-primary',
+      )}
+    >
       <header className="flex items-start justify-between px-1 pb-2">
         <div className="flex min-w-0 items-start gap-1">
           {dragHandle}
           <div className="min-w-0">
+            {superset.letter && (
+              <span className="mb-1 inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                <Link2 className="h-3 w-3" />
+                Superserie {superset.letter}
+              </span>
+            )}
             <h3 className="font-display text-base font-semibold text-primary">
               <button
                 type="button"
@@ -117,6 +138,17 @@ export function ExerciseCard({
             <Replace className="h-4 w-4" />
             Reemplazar ejercicio
           </MenuItem>
+          {superset.letter ? (
+            <MenuItem onClick={() => onUngroup(we.id)}>
+              <Unlink className="h-4 w-4" />
+              Quitar de la superserie
+            </MenuItem>
+          ) : canGroupNext ? (
+            <MenuItem onClick={() => onGroupWithNext(we.id)}>
+              <Link2 className="h-4 w-4" />
+              Agrupar con el siguiente
+            </MenuItem>
+          ) : null}
           <MenuItem danger onClick={() => onRemoveExercise(we.id)}>
             <Trash2 className="h-4 w-4" />
             Quitar ejercicio

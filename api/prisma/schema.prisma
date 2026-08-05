@@ -148,12 +148,13 @@ model RoutineExercise {
   id           String @id @default(cuid())
   routineId    String
   exerciseId   String
-  order        Int
-  targetSets   Int    @default(3)
-  targetReps   Int? // objetivo de reps por serie (opcional)
-  targetWeight Float? // objetivo de peso por serie, en kg (opcional)
-  restSeconds  Int? // descanso sugerido entre series (opcional)
-  note         String? // nota del ejercicio en la rutina
+  order         Int
+  supersetGroup Int? // misma superserie = mismo entero (letra derivada en el front)
+  targetSets    Int    @default(3)
+  targetReps    Int? // objetivo de reps por serie (opcional)
+  targetWeight  Float? // objetivo de peso por serie, en kg (opcional)
+  restSeconds   Int? // descanso sugerido entre series (opcional)
+  note          String? // nota del ejercicio en la rutina
 
   routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id])
@@ -186,6 +187,9 @@ model WorkoutExercise {
   workoutId  String
   exerciseId String
   order      Int
+  // Superserie: ejercicios con el mismo entero se alternan (misma letra A/B).
+  // Null = ejercicio suelto. La letra se deriva en el front, no se persiste.
+  supersetGroup Int?
   // Objetivos copiados de la rutina al empezar (guía durante el entreno).
   // Null en alta manual. No se recalculan si la rutina cambia después.
   targetReps   Int?

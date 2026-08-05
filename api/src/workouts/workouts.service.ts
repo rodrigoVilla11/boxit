@@ -11,6 +11,7 @@ import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
+import { SetSupersetDto } from './dto/set-superset.dto';
 import { computeDurationSec, computeWorkoutTotals } from './workouts.calc';
 
 // Entreno con ejercicios (ordenados) y sus series (ordenadas).
@@ -305,6 +306,7 @@ export class WorkoutsService {
           create: source.exercises.map((we) => ({
             exerciseId: we.exerciseId,
             order: we.order,
+            supersetGroup: we.supersetGroup,
             targetReps: we.targetReps,
             targetWeight: we.targetWeight,
             restSeconds: we.restSeconds,
@@ -421,6 +423,22 @@ export class WorkoutsService {
           ],
         },
       },
+    });
+    return this.findFull(workoutId);
+  }
+
+  /** Asigna (o limpia con null) el grupo de superserie de un ejercicio del entreno. */
+  async setSuperset(
+    userId: string,
+    workoutId: string,
+    workoutExerciseId: string,
+    dto: SetSupersetDto,
+  ): Promise<FullWorkout> {
+    await this.assertActive(userId, workoutId);
+    await this.assertWorkoutExercise(workoutId, workoutExerciseId);
+    await this.prisma.workoutExercise.update({
+      where: { id: workoutExerciseId },
+      data: { supersetGroup: dto.group ?? null },
     });
     return this.findFull(workoutId);
   }

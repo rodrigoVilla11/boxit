@@ -19,6 +19,7 @@ import { AddSetDto } from './dto/add-set.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
+import { SetSupersetDto } from './dto/set-superset.dto';
 import { ReorderDto } from './dto/reorder.dto';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 
@@ -131,6 +132,16 @@ export class WorkoutsController {
     @Body() dto: ReplaceExerciseDto,
   ) {
     return this.workouts.replaceExercise(user.id, id, workoutExerciseId, dto);
+  }
+
+  @Patch(':id/exercises/:workoutExerciseId/superset')
+  setSuperset(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+    @Body() dto: SetSupersetDto,
+  ) {
+    return this.workouts.setSuperset(user.id, id, workoutExerciseId, dto);
   }
 
   @Post(':id/exercises/:workoutExerciseId/sets')

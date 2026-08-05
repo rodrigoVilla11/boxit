@@ -53,6 +53,7 @@ import {
   type WorkoutExercise,
 } from '@/lib/workouts';
 import { bumpRecord, isNewPr } from '@/lib/prs';
+import { supersetMap, nextSupersetGroup } from '@/lib/superset';
 
 export default function EntrenoPage() {
   const router = useRouter();
@@ -148,7 +149,9 @@ export default function EntrenoPage() {
     const ok = await wo.saveSet(setId, patch);
     if (!ok) return;
     if (patch.completed === true) {
-      rest.start();
+      // En superserie no se descansa entre miembros: sólo tras el último del grupo.
+      const ss = ex && wo.workout ? supersetMap(wo.workout.exercises)[ex.id] : undefined;
+      if (!(ss?.letter && ss.position !== 'last')) rest.start();
       // ¿Récord? Compará el peso/reps recién completados con el mejor previo.
       if (
         ex &&
@@ -170,6 +173,21 @@ export default function EntrenoPage() {
         }
       }
     }
+  }
+
+  // Agrupa un ejercicio con el siguiente en una superserie (comparten grupo).
+  function onGroupWithNext(weId: string) {
+    const exs = wo.workout?.exercises ?? [];
+    const i = exs.findIndex((e) => e.id === weId);
+    const next = exs[i + 1];
+    if (i < 0 || !next) return;
+    const group =
+      exs[i].supersetGroup ?? next.supersetGroup ?? nextSupersetGroup(exs);
+    if (exs[i].supersetGroup !== group) wo.setSuperset(weId, group);
+    if (next.supersetGroup !== group) wo.setSuperset(next.id, group);
+  }
+  function onUngroup(weId: string) {
+    wo.setSuperset(weId, null);
   }
 
   async function onFinish() {
@@ -341,6 +359,7 @@ export default function EntrenoPage() {
   }
 
   const workout = wo.workout;
+  const ss = supersetMap(workout.exercises);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -372,12 +391,16 @@ export default function EntrenoPage() {
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-3">
-                {workout.exercises.map((we) => (
+                {workout.exercises.map((we, i) => (
                   <SortableExercise
                     key={we.id}
                     we={we}
                     previous={wo.previous[we.exerciseId] ?? null}
                     record={prs[we.exerciseId]}
+                    superset={ss[we.id]}
+                    canGroupNext={i < workout.exercises.length - 1}
+                    onGroupWithNext={onGroupWithNext}
+                    onUngroup={onUngroup}
                     onSaveSet={onSaveSet}
                     onAddSet={wo.addSet}
                     onRemoveSet={wo.removeSet}

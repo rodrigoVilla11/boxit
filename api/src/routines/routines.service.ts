@@ -15,6 +15,7 @@ function toRoutineExerciseRows(exercises: RoutineExerciseInput[]) {
   return exercises.map((e, i) => ({
     exerciseId: e.exerciseId,
     order: i + 1,
+    supersetGroup: e.supersetGroup ?? null,
     targetSets: e.targetSets,
     targetReps: e.targetReps ?? null,
     targetWeight: e.targetWeight ?? null,
@@ -115,6 +116,7 @@ export class RoutinesService {
           create: routine.exercises.map((re) => ({
             exerciseId: re.exerciseId,
             order: re.order,
+            supersetGroup: re.supersetGroup,
             // Copia los objetivos de la rutina como guía durante el entreno
             targetReps: re.targetReps,
             targetWeight: re.targetWeight,

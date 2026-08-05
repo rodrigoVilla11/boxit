@@ -19,6 +19,12 @@ export class RoutineExerciseInput {
   @Max(20, { message: 'Máximo 20 series.' })
   targetSets!: number;
 
+  // Superserie: mismo entero = mismo grupo (opcional)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  supersetGroup?: number | null;
+
   // Objetivos opcionales por serie (peso siempre en kg)
   @IsOptional()
   @IsInt()

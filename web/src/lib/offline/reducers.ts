@@ -77,6 +77,7 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
         order: nextOrder(doc.exercises),
         exerciseId: op.exercise.id,
         exercise: op.exercise,
+        supersetGroup: null,
         // alta manual: sin objetivos (los targets llegan al empezar una rutina)
         targetReps: null,
         targetWeight: null,
@@ -118,6 +119,13 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
         ...doc,
         ...(op.patch.title !== undefined ? { title: op.patch.title } : {}),
         ...(op.patch.note !== undefined ? { note: op.patch.note } : {}),
+      };
+    case 'setSuperset':
+      return {
+        ...doc,
+        exercises: doc.exercises.map((e) =>
+          e.id === op.weId ? { ...e, supersetGroup: op.group } : e,
+        ),
       };
     case 'updateSet':
       return {
