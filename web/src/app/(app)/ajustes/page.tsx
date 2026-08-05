@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { PasswordField } from '@/components/ui/password-field';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SwitchVisual } from '@/components/ui/switch';
+import { PushToggle } from '@/components/settings/push-toggle';
 import { useUnit } from '@/components/unit-provider';
 import { usePreferences } from '@/components/preferences-provider';
 import { useToast } from '@/components/toast-provider';
@@ -165,6 +166,12 @@ export default function AjustesPage() {
         <p className="mt-2 text-xs text-textMuted">
           Los pesos se guardan en kg; el cambio es solo de visualización.
         </p>
+      </section>
+
+      {/* Recordatorios push */}
+      <section className="mt-5">
+        <h2 className="mb-2 text-sm font-semibold text-textMuted">Recordatorios</h2>
+        <PushToggle />
       </section>
 
       {/* Descanso */}
