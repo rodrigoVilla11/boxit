@@ -24,6 +24,10 @@ export type ProfilePatch = {
   sex?: Sex | null;
   heightCm?: number | null;
   goalWeightKg?: number | null;
+  reminderEnabled?: boolean;
+  reminderHour?: number;
+  inactivityReminderDays?: number | null;
+  timezoneOffsetMin?: number | null;
 };
 
 async function parse(res: Response): Promise<unknown> {

@@ -85,6 +85,12 @@ model User {
   heightCm     Float? // para el IMC
   goalWeightKg Float? // objetivo de peso, en kg
 
+  // Recordatorios push
+  reminderEnabled         Boolean @default(false)
+  reminderHour            Int     @default(19) // hora local (0-23) del aviso "hoy toca"
+  inactivityReminderDays  Int? // avisa si no entrena hace N días (null = off)
+  timezoneOffsetMin       Int? // offset del navegador (getTimezoneOffset) para la hora local
+
   workouts      Workout[]
   routines      Routine[]
   refreshTokens RefreshToken[]

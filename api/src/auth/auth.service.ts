@@ -25,6 +25,11 @@ export type PublicUser = {
   sex: Sex | null;
   heightCm: number | null;
   goalWeightKg: number | null;
+  // recordatorios push
+  reminderEnabled: boolean;
+  reminderHour: number;
+  inactivityReminderDays: number | null;
+  timezoneOffsetMin: number | null;
 };
 
 /** Campos de perfil editables; null limpia el valor. */
@@ -35,6 +40,10 @@ export type ProfilePatch = {
   sex?: Sex | null;
   heightCm?: number | null;
   goalWeightKg?: number | null;
+  reminderEnabled?: boolean;
+  reminderHour?: number;
+  inactivityReminderDays?: number | null;
+  timezoneOffsetMin?: number | null;
 };
 export type AuthResult = { user: PublicUser } & IssuedTokens;
 
@@ -88,6 +97,10 @@ export class AuthService {
       sex: u.sex,
       heightCm: u.heightCm,
       goalWeightKg: u.goalWeightKg,
+      reminderEnabled: u.reminderEnabled,
+      reminderHour: u.reminderHour,
+      inactivityReminderDays: u.inactivityReminderDays,
+      timezoneOffsetMin: u.timezoneOffsetMin,
     };
   }
 
@@ -113,6 +126,18 @@ export class AuthService {
         ...(data.heightCm !== undefined ? { heightCm: data.heightCm } : {}),
         ...(data.goalWeightKg !== undefined
           ? { goalWeightKg: data.goalWeightKg }
+          : {}),
+        ...(data.reminderEnabled !== undefined
+          ? { reminderEnabled: data.reminderEnabled }
+          : {}),
+        ...(data.reminderHour !== undefined
+          ? { reminderHour: data.reminderHour }
+          : {}),
+        ...(data.inactivityReminderDays !== undefined
+          ? { inactivityReminderDays: data.inactivityReminderDays }
+          : {}),
+        ...(data.timezoneOffsetMin !== undefined
+          ? { timezoneOffsetMin: data.timezoneOffsetMin }
           : {}),
       },
     });

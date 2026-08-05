@@ -1,6 +1,8 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -51,4 +53,29 @@ export class UpdateMeDto {
   @Min(20, { message: 'Peso objetivo inválido.' })
   @Max(500, { message: 'Peso objetivo inválido.' })
   goalWeightKg?: number | null;
+
+  // Recordatorios push
+  @IsOptional()
+  @IsBoolean()
+  reminderEnabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  reminderHour?: number;
+
+  @IsOptional()
+  @ValidateIf(notNull)
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  inactivityReminderDays?: number | null;
+
+  @IsOptional()
+  @ValidateIf(notNull)
+  @IsInt()
+  @Min(-840)
+  @Max(840)
+  timezoneOffsetMin?: number | null;
 }

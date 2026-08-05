@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { BellRing } from 'lucide-react';
 import { SwitchVisual } from '@/components/ui/switch';
 import { useToast } from '@/components/toast-provider';
+import { updateProfile } from '@/lib/auth';
 import {
   currentPermission,
   isSubscribed,
@@ -40,11 +41,17 @@ export function PushToggle() {
     try {
       if (on) {
         await unsubscribe();
+        await updateProfile({ reminderEnabled: false }).catch(() => undefined);
         setOn(false);
       } else {
         const ok = await subscribe();
         setOn(ok);
         if (ok) {
+          // habilita el cron y guarda el huso horario del dispositivo
+          await updateProfile({
+            reminderEnabled: true,
+            timezoneOffsetMin: new Date().getTimezoneOffset(),
+          }).catch(() => undefined);
           toast.success('Recordatorios activados.');
         } else {
           setDenied(currentPermission() === 'denied');
