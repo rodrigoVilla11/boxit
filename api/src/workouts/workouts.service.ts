@@ -326,6 +326,50 @@ export class WorkoutsService {
     }));
   }
 
+  /**
+   * Volumen por músculo primario en ventanas de 7 días hacia atrás (para la
+   * serie temporal). `weeksAgo` 0 = últimos 7 días. Sólo series de trabajo.
+   */
+  async muscleSeries(
+    userId: string,
+    weeks = 8,
+  ): Promise<{ weeksAgo: number; byMuscle: Record<string, number> }[]> {
+    const now = Date.now();
+    const week = 7 * 86_400_000;
+    const since = new Date(now - weeks * week);
+    const sets = await this.prisma.workoutSet.findMany({
+      where: {
+        completed: true,
+        type: { not: 'WARMUP' },
+        workoutExercise: { workout: { userId, finishedAt: { gte: since } } },
+      },
+      select: {
+        weight: true,
+        reps: true,
+        workoutExercise: {
+          select: {
+            exercise: { select: { primaryMuscle: true } },
+            workout: { select: { finishedAt: true } },
+          },
+        },
+      },
+    });
+
+    const buckets: Record<string, number>[] = Array.from({ length: weeks }, () => ({}));
+    for (const s of sets) {
+      const t = s.workoutExercise.workout.finishedAt?.getTime();
+      if (t == null) continue;
+      const ago = Math.floor((now - t) / week);
+      if (ago < 0 || ago >= weeks) continue;
+      const m = s.workoutExercise.exercise.primaryMuscle;
+      buckets[ago][m] = (buckets[ago][m] ?? 0) + s.weight * s.reps;
+    }
+    // más viejo primero (weeksAgo descendente)
+    return buckets
+      .map((byMuscle, ago) => ({ weeksAgo: ago, byMuscle }))
+      .sort((a, b) => b.weeksAgo - a.weeksAgo);
+  }
+
   async active(userId: string): Promise<FullWorkout | null> {
     const workout = await this.prisma.workout.findFirst({
       where: { userId, finishedAt: null },

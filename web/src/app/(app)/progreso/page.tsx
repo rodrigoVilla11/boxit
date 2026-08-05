@@ -7,6 +7,7 @@ import { CalendarHeatmap } from '@/components/progress/calendar-heatmap';
 import { PlanWeekProgress } from '@/components/progress/plan-week-progress';
 import { LifetimeStats } from '@/components/progress/lifetime-stats';
 import { MuscleMap } from '@/components/progress/muscle-map';
+import { MuscleVolumeChart } from '@/components/progress/muscle-volume-chart';
 import { BodyweightChart } from '@/components/progress/bodyweight-chart';
 import { VolumeChart, type VolumePoint } from '@/components/progress/volume-chart';
 import { ErrorState } from '@/components/ui/error-state';
@@ -84,6 +85,7 @@ export default function ProgresoPage() {
             <ChevronRight className="h-5 w-5 shrink-0 text-textMuted" />
           </Link>
           <MuscleMap />
+          <MuscleVolumeChart />
           <BodyweightChart />
           <VolumeChart points={volume} />
           {exercises.length > 0 && <ExerciseProgress exercises={exercises} />}

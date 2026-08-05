@@ -343,6 +343,13 @@ export async function getRecords(): Promise<ExerciseRecords[]> {
   return json<ExerciseRecords[]>(res, 'No pudimos cargar los récords.');
 }
 
+export type MuscleWeek = { weeksAgo: number; byMuscle: Record<string, number> };
+
+export async function getMuscleSeries(weeks = 8): Promise<MuscleWeek[]> {
+  const res = await apiFetch(`/api/workouts/muscle-map/series?weeks=${weeks}`);
+  return json<MuscleWeek[]>(res, 'No pudimos cargar la serie por músculo.');
+}
+
 /** Totales en vivo (misma regla que el back: warmups excluidos). */
 export function liveTotals(workout: Workout): { volume: number; sets: number } {
   const working = workout.exercises

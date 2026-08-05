@@ -62,6 +62,14 @@ export class WorkoutsController {
     return this.workouts.muscleMap(user.id, days ?? 30);
   }
 
+  @Get('muscle-map/series')
+  muscleSeries(
+    @CurrentUser() user: AuthUser,
+    @Query('weeks', new ParseIntPipe({ optional: true })) weeks?: number,
+  ) {
+    return this.workouts.muscleSeries(user.id, Math.min(weeks ?? 8, 26));
+  }
+
   @Get(':id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.workouts.getOne(user.id, id);
