@@ -8,6 +8,7 @@ import { PlanWeekProgress } from '@/components/progress/plan-week-progress';
 import { LifetimeStats } from '@/components/progress/lifetime-stats';
 import { MuscleMap } from '@/components/progress/muscle-map';
 import { MuscleVolumeChart } from '@/components/progress/muscle-volume-chart';
+import { CardioChart } from '@/components/progress/cardio-chart';
 import { BodyweightChart } from '@/components/progress/bodyweight-chart';
 import { VolumeChart, type VolumePoint } from '@/components/progress/volume-chart';
 import { ErrorState } from '@/components/ui/error-state';
@@ -86,6 +87,7 @@ export default function ProgresoPage() {
           </Link>
           <MuscleMap />
           <MuscleVolumeChart />
+          <CardioChart />
           <BodyweightChart />
           <VolumeChart points={volume} />
           {exercises.length > 0 && <ExerciseProgress exercises={exercises} />}
