@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUnit } from '@/components/unit-provider';
 import { useToast } from '@/components/toast-provider';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, formatSessionDate } from '@/lib/format';
 import { formatVolume } from '@/lib/units';
+import { shareWorkoutImage } from '@/lib/share-image';
 import { updateWorkout, type Workout } from '@/lib/workouts';
 
 export function FinishSummary({
@@ -20,6 +21,25 @@ export function FinishSummary({
   const toast = useToast();
   const [title, setTitle] = useState(workout.title ?? '');
   const [note, setNote] = useState(workout.note ?? '');
+  const [sharing, setSharing] = useState(false);
+
+  async function onShare() {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      await shareWorkoutImage({
+        title: title.trim() || null,
+        dateText: formatSessionDate(workout.finishedAt),
+        durationText: formatDuration(workout.durationSec),
+        volumeText: formatVolume(workout.totalVolume, unit),
+        sets: workout.totalSets,
+      });
+    } catch {
+      // el usuario canceló o el navegador no soporta compartir/descargar
+    } finally {
+      setSharing(false);
+    }
+  }
 
   // El entreno ya está terminado: guardamos con un PATCH directo (best-effort).
   const save = async (patch: { title?: string | null; note?: string | null }) => {
@@ -72,7 +92,20 @@ export function FinishSummary({
         />
       </div>
 
-      <div className="mt-6 w-full">
+      <div className="mt-6 w-full space-y-2">
+        <button
+          type="button"
+          onClick={onShare}
+          disabled={sharing}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-surface font-semibold text-text ring-1 ring-white/10 transition hover:bg-surfaceRaised active:scale-[0.98] disabled:opacity-60"
+        >
+          {sharing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Share2 className="h-5 w-5 text-primary" />
+          )}
+          Compartir
+        </button>
         <Button onClick={onClose}>Listo</Button>
       </div>
     </div>
