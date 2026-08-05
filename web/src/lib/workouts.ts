@@ -320,6 +320,29 @@ export async function getPersonalRecords(): Promise<PersonalRecord[]> {
   return json<PersonalRecord[]>(res, 'No pudimos cargar los récords.');
 }
 
+export type RecordEntry = {
+  value: number;
+  weight: number;
+  reps: number;
+  achievedAt: string | null;
+  workoutId: string;
+};
+
+export type ExerciseRecords = {
+  exerciseId: string;
+  exerciseName: string;
+  hasWeight: boolean;
+  topWeight: RecordEntry | null;
+  topE1rm: RecordEntry | null;
+  topVolume: RecordEntry | null;
+  topReps: RecordEntry | null;
+};
+
+export async function getRecords(): Promise<ExerciseRecords[]> {
+  const res = await apiFetch('/api/workouts/records');
+  return json<ExerciseRecords[]>(res, 'No pudimos cargar los récords.');
+}
+
 /** Totales en vivo (misma regla que el back: warmups excluidos). */
 export function liveTotals(workout: Workout): { volume: number; sets: number } {
   const working = workout.exercises

@@ -49,6 +49,11 @@ export class WorkoutsController {
     return this.workouts.personalRecords(user.id);
   }
 
+  @Get('records')
+  records(@CurrentUser() user: AuthUser) {
+    return this.workouts.records(user.id);
+  }
+
   @Get('muscle-map')
   muscleMap(
     @CurrentUser() user: AuthUser,

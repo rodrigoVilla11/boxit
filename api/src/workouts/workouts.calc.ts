@@ -39,6 +39,13 @@ export function countCompletedSets(sets: CalcSet[]): number {
   return sets.reduce((acc, s) => (isWorkingCompleted(s) ? acc + 1 : acc), 0);
 }
 
+/** 1RM estimado (fórmula de Epley). Con 1 rep devuelve el peso tal cual. */
+export function estimate1RM(weightKg: number, reps: number): number {
+  if (weightKg <= 0 || reps <= 0) return 0;
+  if (reps <= 1) return weightKg;
+  return weightKg * (1 + reps / 30);
+}
+
 /** Duración en segundos entre inicio y fin (nunca negativa). */
 export function computeDurationSec(startedAt: Date, finishedAt: Date): number {
   return Math.max(

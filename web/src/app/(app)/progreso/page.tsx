@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, Loader2, Trophy } from 'lucide-react';
 import { CalendarHeatmap } from '@/components/progress/calendar-heatmap';
 import { PlanWeekProgress } from '@/components/progress/plan-week-progress';
 import { LifetimeStats } from '@/components/progress/lifetime-stats';
@@ -69,6 +70,19 @@ export default function ProgresoPage() {
           <CalendarHeatmap />
           <PlanWeekProgress />
           <LifetimeStats />
+          <Link
+            href="/progreso/records"
+            className="flex items-center gap-3 rounded-2xl bg-surface p-4 shadow-card transition active:scale-[0.99]"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accentLime/15">
+              <Trophy className="h-5 w-5 text-accentLime" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-base font-semibold text-text">Récords</p>
+              <p className="text-xs text-textMuted">Tus máximos por ejercicio.</p>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-textMuted" />
+          </Link>
           <MuscleMap />
           <BodyweightChart />
           <VolumeChart points={volume} />

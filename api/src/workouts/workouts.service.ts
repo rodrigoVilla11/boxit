@@ -12,7 +12,11 @@ import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
 import { SetSupersetDto } from './dto/set-superset.dto';
-import { computeDurationSec, computeWorkoutTotals } from './workouts.calc';
+import {
+  computeDurationSec,
+  computeWorkoutTotals,
+  estimate1RM,
+} from './workouts.calc';
 
 // Entreno con ejercicios (ordenados) y sus series (ordenadas).
 export const fullWorkoutInclude = {
@@ -47,6 +51,25 @@ export type PersonalRecord = {
   reps: number;
   workoutId: string;
   achievedAt: Date | null;
+};
+
+// Un récord puntual: el valor de la métrica + la serie que lo logró.
+export type RecordEntry = {
+  value: number;
+  weight: number;
+  reps: number;
+  achievedAt: Date | null;
+  workoutId: string;
+};
+
+export type ExerciseRecords = {
+  exerciseId: string;
+  exerciseName: string;
+  hasWeight: boolean; // false = ejercicio a peso corporal
+  topWeight: RecordEntry | null; // serie más pesada
+  topE1rm: RecordEntry | null; // mejor 1RM estimado (Epley)
+  topVolume: RecordEntry | null; // mejor volumen de una serie (peso × reps)
+  topReps: RecordEntry | null; // mejor cantidad de reps
 };
 
 @Injectable()
@@ -181,6 +204,74 @@ export class WorkoutsService {
     }
 
     return records.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'es'));
+  }
+
+  /**
+   * Hall de récords por ejercicio: para cada uno, la mejor serie por peso,
+   * por 1RM estimado, por volumen de serie y por reps. Sólo series de trabajo
+   * completadas (NORMAL o AL FALLO) de entrenos terminados.
+   */
+  async records(userId: string): Promise<ExerciseRecords[]> {
+    const sets = await this.prisma.workoutSet.findMany({
+      where: {
+        completed: true,
+        type: { in: ['NORMAL', 'FAILURE'] },
+        reps: { gt: 0 },
+        workoutExercise: { workout: { userId, finishedAt: { not: null } } },
+      },
+      select: {
+        weight: true,
+        reps: true,
+        workoutExercise: {
+          select: {
+            exerciseId: true,
+            exercise: { select: { name: true } },
+            workout: { select: { id: true, finishedAt: true } },
+          },
+        },
+      },
+    });
+
+    type Row = { weight: number; reps: number; at: Date | null; workoutId: string };
+    const groups = new Map<string, { name: string; rows: Row[] }>();
+    for (const s of sets) {
+      const we = s.workoutExercise;
+      const g = groups.get(we.exerciseId) ?? { name: we.exercise.name, rows: [] };
+      g.rows.push({
+        weight: s.weight,
+        reps: s.reps,
+        at: we.workout.finishedAt,
+        workoutId: we.workout.id,
+      });
+      groups.set(we.exerciseId, g);
+    }
+
+    const round = (n: number) => Math.round(n * 10) / 10;
+    const entry = (r: Row | undefined, value: number): RecordEntry | null =>
+      r && value > 0
+        ? { value: round(value), weight: r.weight, reps: r.reps, achievedAt: r.at, workoutId: r.workoutId }
+        : null;
+    const bestBy = (rows: Row[], better: (a: Row, b: Row) => boolean): Row =>
+      rows.reduce((best, r) => (better(r, best) ? r : best));
+
+    const out: ExerciseRecords[] = [];
+    for (const [exerciseId, g] of groups) {
+      const hasWeight = g.rows.some((r) => r.weight > 0);
+      const wRow = bestBy(g.rows, (a, b) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps));
+      const eRow = bestBy(g.rows, (a, b) => estimate1RM(a.weight, a.reps) > estimate1RM(b.weight, b.reps));
+      const vRow = bestBy(g.rows, (a, b) => a.weight * a.reps > b.weight * b.reps);
+      const rRow = bestBy(g.rows, (a, b) => a.reps > b.reps);
+      out.push({
+        exerciseId,
+        exerciseName: g.name,
+        hasWeight,
+        topWeight: hasWeight ? entry(wRow, wRow.weight) : null,
+        topE1rm: hasWeight ? entry(eRow, estimate1RM(eRow.weight, eRow.reps)) : null,
+        topVolume: hasWeight ? entry(vRow, vRow.weight * vRow.reps) : null,
+        topReps: entry(rRow, rRow.reps),
+      });
+    }
+    return out.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName, 'es'));
   }
 
   /**
