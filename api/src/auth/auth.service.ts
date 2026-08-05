@@ -25,6 +25,7 @@ export type PublicUser = {
   sex: Sex | null;
   heightCm: number | null;
   goalWeightKg: number | null;
+  onboardedAt: string | null;
   // recordatorios push
   reminderEnabled: boolean;
   reminderHour: number;
@@ -40,6 +41,7 @@ export type ProfilePatch = {
   sex?: Sex | null;
   heightCm?: number | null;
   goalWeightKg?: number | null;
+  onboarded?: boolean;
   reminderEnabled?: boolean;
   reminderHour?: number;
   inactivityReminderDays?: number | null;
@@ -97,6 +99,7 @@ export class AuthService {
       sex: u.sex,
       heightCm: u.heightCm,
       goalWeightKg: u.goalWeightKg,
+      onboardedAt: u.onboardedAt ? u.onboardedAt.toISOString() : null,
       reminderEnabled: u.reminderEnabled,
       reminderHour: u.reminderHour,
       inactivityReminderDays: u.inactivityReminderDays,
@@ -127,6 +130,7 @@ export class AuthService {
         ...(data.goalWeightKg !== undefined
           ? { goalWeightKg: data.goalWeightKg }
           : {}),
+        ...(data.onboarded ? { onboardedAt: new Date() } : {}),
         ...(data.reminderEnabled !== undefined
           ? { reminderEnabled: data.reminderEnabled }
           : {}),

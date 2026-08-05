@@ -85,6 +85,9 @@ model User {
   heightCm     Float? // para el IMC
   goalWeightKg Float? // objetivo de peso, en kg
 
+  // Primer uso: null hasta que completa el onboarding
+  onboardedAt DateTime?
+
   // Recordatorios push
   reminderEnabled         Boolean @default(false)
   reminderHour            Int     @default(19) // hora local (0-23) del aviso "hoy toca"

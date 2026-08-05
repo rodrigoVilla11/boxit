@@ -55,6 +55,11 @@ export class UpdateMeDto {
   goalWeightKg?: number | null;
 
   // Recordatorios push
+  // marca el onboarding como completo (setea onboardedAt)
+  @IsOptional()
+  @IsBoolean()
+  onboarded?: boolean;
+
   @IsOptional()
   @IsBoolean()
   reminderEnabled?: boolean;

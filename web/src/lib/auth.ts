@@ -14,6 +14,7 @@ export type SessionUser = {
   sex: Sex | null;
   heightCm: number | null;
   goalWeightKg: number | null; // siempre en kg
+  onboardedAt: string | null;
   // recordatorios push
   reminderEnabled: boolean;
   reminderHour: number;
@@ -29,6 +30,7 @@ export type ProfilePatch = {
   sex?: Sex | null;
   heightCm?: number | null;
   goalWeightKg?: number | null;
+  onboarded?: boolean;
   reminderEnabled?: boolean;
   reminderHour?: number;
   inactivityReminderDays?: number | null;
