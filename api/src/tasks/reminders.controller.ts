@@ -8,9 +8,9 @@ import { RemindersService } from './reminders.service';
 export class RemindersController {
   constructor(private readonly reminders: RemindersService) {}
 
-  /** Fuerza el envío del "hoy toca" al usuario (para probar la notificación). */
+  /** Fuerza el recordatorio del día (plan o inactividad) para probar la notificación. */
   @Post('test')
   test(@CurrentUser() user: AuthUser) {
-    return this.reminders.sendTodayReminder(user.id);
+    return this.reminders.sendDailyReminder(user.id);
   }
 }

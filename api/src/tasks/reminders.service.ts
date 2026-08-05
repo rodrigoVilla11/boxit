@@ -25,11 +25,73 @@ export class RemindersService {
     const now = Date.now();
     for (const u of users) {
       if (this.localHour(now, u.timezoneOffsetMin) === u.reminderHour) {
-        await this.sendTodayReminder(u.id).catch((e) =>
+        await this.sendDailyReminder(u.id, now).catch((e) =>
           this.logger.warn(`recordatorio ${u.id}: ${String(e)}`),
         );
       }
     }
+  }
+
+  /**
+   * El recordatorio del día: si hay plan para hoy manda "hoy toca"; si no,
+   * y el usuario lleva demasiados días sin entrenar, manda el aviso de
+   * inactividad. Devuelve qué se mandó.
+   */
+  async sendDailyReminder(
+    userId: string,
+    nowMs = Date.now(),
+  ): Promise<{ kind: 'plan' | 'inactivity' | 'none'; sent: number; message: string | null }> {
+    const plan = await this.sendTodayReminder(userId, nowMs);
+    if (plan.message) return { kind: 'plan', ...plan };
+    const inact = await this.sendInactivityReminder(userId, nowMs);
+    if (inact.message) return { kind: 'inactivity', ...inact };
+    return { kind: 'none', sent: 0, message: null };
+  }
+
+  /**
+   * Aviso si el usuario lleva ≥ inactivityReminderDays sin ningún entreno ni
+   * actividad. Null si no lo tiene configurado o si entrenó hace poco.
+   */
+  async sendInactivityReminder(
+    userId: string,
+    nowMs = Date.now(),
+  ): Promise<{ sent: number; message: string | null }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { inactivityReminderDays: true },
+    });
+    const days = user?.inactivityReminderDays;
+    if (!days) return { sent: 0, message: null };
+
+    const [lastW, lastA] = await Promise.all([
+      this.prisma.workout.findFirst({
+        where: { userId, finishedAt: { not: null } },
+        orderBy: { finishedAt: 'desc' },
+        select: { finishedAt: true },
+      }),
+      this.prisma.activity.findFirst({
+        where: { userId },
+        orderBy: { performedAt: 'desc' },
+        select: { performedAt: true },
+      }),
+    ]);
+    const last = Math.max(
+      lastW?.finishedAt?.getTime() ?? 0,
+      lastA?.performedAt?.getTime() ?? 0,
+    );
+    const daysSince = last === 0 ? Infinity : (nowMs - last) / 86_400_000;
+    if (daysSince < days) return { sent: 0, message: null };
+
+    const message =
+      last === 0
+        ? 'Todavía no registraste ningún entreno. ¿Arrancamos hoy?'
+        : `Hace ${Math.floor(daysSince)} días que no entrenás. ¡Dale que podés! 💪`;
+    const sent = await this.push.sendToUser(userId, {
+      title: 'BOX iT',
+      body: message,
+      url: '/entreno',
+    });
+    return { sent, message };
   }
 
   /** "Hoy toca …" del plan activo. Devuelve el mensaje y cuántos push salieron. */

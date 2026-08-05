@@ -14,6 +14,11 @@ export type SessionUser = {
   sex: Sex | null;
   heightCm: number | null;
   goalWeightKg: number | null; // siempre en kg
+  // recordatorios push
+  reminderEnabled: boolean;
+  reminderHour: number;
+  inactivityReminderDays: number | null;
+  timezoneOffsetMin: number | null;
 };
 
 /** Parche de perfil: omitir un campo lo deja igual; null lo limpia. */
