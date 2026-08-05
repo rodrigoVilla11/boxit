@@ -11,6 +11,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Sparkles,
   Trash2,
   Waves,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { SettingsButton } from '@/components/nav/settings-button';
 import { PlanWeek } from '@/components/plans/plan-week';
 import { DayEditor } from '@/components/plans/day-editor';
+import { TemplatePicker } from '@/components/routines/template-picker';
 import { useToast } from '@/components/toast-provider';
 import { cn } from '@/lib/cn';
 import { plural } from '@/lib/plural';
@@ -58,6 +60,7 @@ export default function RutinasPage() {
   const [starting, setStarting] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Routine | null>(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   // plantillas de cardio
   const [cardio, setCardio] = useState<CardioRoutine[]>([]);
@@ -311,13 +314,23 @@ export default function RutinasPage() {
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-text">Rutinas de gym</h2>
-              <Link
-                href="/rutinas/nueva"
-                className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                Crear
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTemplatesOpen(true)}
+                  className="flex h-9 items-center gap-1.5 rounded-xl bg-surface px-3 text-sm font-semibold text-text ring-1 ring-white/10 transition hover:bg-surfaceRaised active:scale-95"
+                >
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Plantillas
+                </button>
+                <Link
+                  href="/rutinas/nueva"
+                  className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-ink transition hover:bg-primary-deep active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  Crear
+                </Link>
+              </div>
             </div>
             {routines.length === 0 ? (
               <EmptyRoutines />
@@ -407,6 +420,16 @@ export default function RutinasPage() {
           onSaved={(p) => {
             setPlans((prev) => (prev ? prev.map((x) => (x.id === p.id ? p : x)) : prev));
             setEditingDay(null);
+          }}
+        />
+      )}
+
+      {templatesOpen && (
+        <TemplatePicker
+          onClose={() => setTemplatesOpen(false)}
+          onCreated={(routine) => {
+            setTemplatesOpen(false);
+            router.push(`/rutinas/${routine.id}/editar`);
           }}
         />
       )}
