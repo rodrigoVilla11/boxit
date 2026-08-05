@@ -90,9 +90,24 @@ model User {
   refreshTokens RefreshToken[]
   exercises     Exercise[]
   bodyweights   Bodyweight[]
-  activities     Activity[]
-  weeklyPlans    WeeklyPlan[]
-  cardioRoutines CardioRoutine[]
+  activities        Activity[]
+  weeklyPlans       WeeklyPlan[]
+  cardioRoutines    CardioRoutine[]
+  pushSubscriptions PushSubscription[]
+}
+
+// Suscripción de un dispositivo a Web Push (una por endpoint del navegador).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model RefreshToken {

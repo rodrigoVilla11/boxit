@@ -16,4 +16,10 @@ export const envValidationSchema = Joi.object({
   CORS_ORIGIN: Joi.string().required(),
   API_PORT: Joi.number().default(3001),
   ADMIN_EMAILS: Joi.string().allow('').default(''),
+  // Web Push (VAPID). Sin estas claves no se pueden mandar notificaciones push.
+  VAPID_PUBLIC_KEY: Joi.string().required(),
+  VAPID_PRIVATE_KEY: Joi.string().required(),
+  VAPID_SUBJECT: Joi.string()
+    .pattern(/^(mailto:|https:\/\/)/)
+    .required(),
 }).unknown(true);

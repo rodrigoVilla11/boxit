@@ -14,6 +14,7 @@ import { BodyweightModule } from './bodyweight/bodyweight.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { CardioRoutinesModule } from './cardio-routines/cardio-routines.module';
 import { PlansModule } from './plans/plans.module';
+import { PushModule } from './push/push.module';
 import { TasksModule } from './tasks/tasks.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { TasksModule } from './tasks/tasks.module';
     ActivitiesModule,
     CardioRoutinesModule,
     PlansModule,
+    PushModule,
     TasksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
