@@ -12,6 +12,7 @@ import { UpdateSetDto } from './dto/update-set.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
 import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
 import { SetSupersetDto } from './dto/set-superset.dto';
+import { ImportWorkoutsDto } from './dto/import-workouts.dto';
 import {
   computeDurationSec,
   computeWorkoutTotals,
@@ -458,6 +459,86 @@ export class WorkoutsService {
       },
     });
     return this.findFull(created.id);
+  }
+
+  /**
+   * Importa entrenos terminados desde un export. Crea todo con ids nuevos (no
+   * confía en los del archivo), resuelve cada ejercicio por id o por nombre, y
+   * saltea los que no pueda resolver. Devuelve cuántos entrenos se importaron.
+   */
+  async importWorkouts(
+    userId: string,
+    dto: ImportWorkoutsDto,
+  ): Promise<{ imported: number }> {
+    const exercises = await this.prisma.exercise.findMany({
+      where: { OR: [{ userId: null }, { userId }] },
+      select: { id: true, name: true },
+    });
+    const ownedIds = new Set(exercises.map((e) => e.id));
+    const byName = new Map(exercises.map((e) => [e.name.toLowerCase(), e.id]));
+    const resolve = (exId?: string, name?: string): string | undefined => {
+      if (exId && ownedIds.has(exId)) return exId;
+      return name ? byName.get(name.toLowerCase()) : undefined;
+    };
+
+    let imported = 0;
+    await this.prisma.$transaction(async (tx) => {
+      for (const w of dto.workouts) {
+        const finishedAt = w.finishedAt ? new Date(w.finishedAt) : new Date();
+        const exerciseRows = w.exercises
+          .map((we, i) => {
+            const exerciseId = resolve(we.exerciseId, we.name);
+            if (!exerciseId) return null;
+            return {
+              exerciseId,
+              order: we.order ?? i + 1,
+              targetReps: we.targetReps ?? null,
+              targetWeight: we.targetWeight ?? null,
+              restSeconds: we.restSeconds ?? null,
+              supersetGroup: we.supersetGroup ?? null,
+              sets: {
+                create: we.sets.map((s, j) => ({
+                  order: s.order ?? j + 1,
+                  type: s.type ?? 'NORMAL',
+                  weight: s.weight ?? 0,
+                  reps: s.reps ?? 0,
+                  completed: s.completed ?? false,
+                  completedAt: s.completed ? finishedAt : null,
+                  rpe: s.rpe ?? null,
+                  note: s.note?.trim() || null,
+                })),
+              },
+            };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null);
+        if (exerciseRows.length === 0) continue;
+
+        const allSets = w.exercises.flatMap((we) => we.sets);
+        const { totalVolume, totalSets } = computeWorkoutTotals(
+          allSets.map((s) => ({
+            type: s.type ?? 'NORMAL',
+            weight: s.weight ?? 0,
+            reps: s.reps ?? 0,
+            completed: s.completed ?? false,
+          })),
+        );
+        await tx.workout.create({
+          data: {
+            userId,
+            title: w.title?.trim() || null,
+            note: w.note?.trim() || null,
+            startedAt: w.startedAt ? new Date(w.startedAt) : finishedAt,
+            finishedAt,
+            durationSec: w.durationSec ?? 0,
+            totalVolume,
+            totalSets,
+            exercises: { create: exerciseRows },
+          },
+        });
+        imported++;
+      }
+    });
+    return { imported };
   }
 
   async addExercise(

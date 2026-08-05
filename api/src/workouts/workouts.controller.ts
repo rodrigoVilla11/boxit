@@ -22,6 +22,7 @@ import { ReplaceExerciseDto } from './dto/replace-exercise.dto';
 import { SetSupersetDto } from './dto/set-superset.dto';
 import { ReorderDto } from './dto/reorder.dto';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
+import { ImportWorkoutsDto } from './dto/import-workouts.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workouts')
@@ -31,6 +32,11 @@ export class WorkoutsController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateWorkoutDto) {
     return this.workouts.create(user.id, dto.id);
+  }
+
+  @Post('import')
+  import(@CurrentUser() user: AuthUser, @Body() dto: ImportWorkoutsDto) {
+    return this.workouts.importWorkouts(user.id, dto);
   }
 
   @Get()

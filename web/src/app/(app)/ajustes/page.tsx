@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
   ChevronLeft,
   Download,
   KeyRound,
+  Upload,
   Loader2,
   LogOut,
   Minus,
@@ -34,6 +35,7 @@ import {
 } from '@/lib/auth';
 import { getBodyweights, type Bodyweight } from '@/lib/bodyweight';
 import { exportCsv, exportJson } from '@/lib/export';
+import { importWorkoutsFromFile } from '@/lib/import';
 import type { WeightUnit } from '@/lib/units';
 
 const UNITS: { value: WeightUnit; label: string }[] = [
@@ -60,6 +62,20 @@ export default function AjustesPage() {
   const [savingPw, setSavingPw] = useState(false);
 
   const [exporting, setExporting] = useState<'json' | 'csv' | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function doImport(file: File) {
+    setImporting(true);
+    try {
+      const n = await importWorkoutsFromFile(file);
+      toast.success(`${n} ${n === 1 ? 'entreno importado' : 'entrenos importados'}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'No pudimos importar.');
+    } finally {
+      setImporting(false);
+    }
+  }
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -308,6 +324,31 @@ export default function AjustesPage() {
               Exportar CSV
             </button>
           </div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) doImport(file);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-surface p-3 text-sm font-medium text-text transition active:scale-[0.99] disabled:opacity-60"
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Importar JSON
+          </button>
 
           <button
             type="button"
