@@ -35,14 +35,23 @@ Creá un proyecto (ej. `boxit`) y adentro:
 Anotá el connection string interno. El host interno suele ser `<proyecto>_<nombre>`
 (ej. `boxit_db`), puerto 5432.
 
-**b) API** — servicio *App*.
+> **Un solo dominio, un solo origen.** El web es el **único servicio público**; la
+> API queda **interna** (sin dominio). El web proxya `/api/*` a la API interna
+> (route handler en `web/src/app/api/[...path]/route.ts`), así la app y la API
+> comparten origen: la cookie de sesión queda en el dominio del web, el middleware
+> la ve y no hay rebotes a `/login` ni CORS cross-subdominio.
+>
+> (Easypanel no deja compartir un mismo dominio entre dos servicios con distinto
+> path, por eso el proxy en vez de partir `/api` en Traefik.)
+
+**b) API** — servicio *App*. **No necesita dominio público** (es interna).
 - **Source:** tu repo Git (rama `main`).
 - **Build:** Dockerfile → `api/Dockerfile` (build context = raíz, es el default).
 - **Environment:**
   ```
   NODE_ENV=production
   DATABASE_URL=postgres://<user>:<pass>@<host-interno>:5432/<db>?schema=public
-  CORS_ORIGIN=https://boxit.tudominio.com
+  CORS_ORIGIN=https://boxit.tudominio.com   (no se usa con el proxy; inofensivo)
   JWT_SECRET=<openssl rand -base64 48>
   JWT_REFRESH_SECRET=<openssl rand -base64 48>
   ADMIN_EMAILS=tu-email@dominio.com
@@ -50,18 +59,17 @@ Anotá el connection string interno. El host interno suele ser `<proyecto>_<nomb
   VAPID_PRIVATE_KEY=<private>
   VAPID_SUBJECT=mailto:tu-email@dominio.com
   ```
-- **Port:** 3001.
-- **Domain:** `boxit.tudominio.com` con **Path = `/api`**, HTTPS activado.
+- **Port:** 3001. **Domain:** ninguno (interna).
 
-**c) Web** — servicio *App*.
+**c) Web** — servicio *App*. Es el único con dominio.
 - **Source:** tu repo Git.
 - **Build:** Dockerfile → `web/Dockerfile`.
-- **Build Args** (se embeben en el build):
+- **Build Args** (se embeben en el build → si los cambiás, **forzá rebuild**):
   ```
-  NEXT_PUBLIC_API_URL=            (vacío → mismo origen, /api relativo)
+  NEXT_PUBLIC_API_URL=            (VACÍO → mismo origen, apiFetch usa /api relativo)
   NEXT_PUBLIC_VAPID_PUBLIC_KEY=<la MISMA public key de la API>
   ```
-- **Environment** (runtime):
+- **Environment** (runtime, NO se hornea → basta redeploy):
   ```
   NODE_ENV=production
   API_INTERNAL_URL=http://<host-interno-de-la-api>:3001    (ej. http://boxit_api:3001)
@@ -69,7 +77,9 @@ Anotá el connection string interno. El host interno suele ser `<proyecto>_<nomb
 - **Port:** 3000.
 - **Domain:** `boxit.tudominio.com` con **Path = `/`**, HTTPS activado.
 
-Traefik enruta `/api/*` a la API y el resto al web, todo en el mismo dominio.
+El web recibe todo el tráfico; sus llamadas `/api/*` las reenvía al
+`API_INTERNAL_URL` server-side. `NEXT_PUBLIC_API_URL` **tiene que quedar vacío**
+(si apunta al dominio de la API, la cookie se va a ese dominio y el login "rebota").
 
 ### 3. Deploy
 Deploy a cada servicio. La API **corre las migraciones sola** al arrancar

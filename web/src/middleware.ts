@@ -31,8 +31,9 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Corre en todo, menos assets estáticos, SW, manifest, íconos y el shell offline
+  // Corre en todo, menos el proxy /api, assets estáticos, SW, manifest, íconos
+  // y el shell offline. /api NO pasa por acá: lo maneja el route handler proxy.
   matcher: [
-    '/((?!_next|icons|manifest.webmanifest|sw.js|icon.png|favicon.ico|~offline).*)',
+    '/((?!api|_next|icons|manifest.webmanifest|sw.js|icon.png|favicon.ico|~offline).*)',
   ],
 };
