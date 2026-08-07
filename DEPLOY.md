@@ -99,16 +99,16 @@ corrés de más no pasa nada. (No hace falta exponer la base ni ts-node.)
 
 **Librería extendida (opcional, +714 ejercicios).** El dataset de
 [wrkout/exercises.json](https://github.com/wrkout/exercises.json) viene mapeado
-a los enums de BOX iT en `prisma/data/exercises-wrkout.json`, con los nombres
-traducidos al español y sin los duplicados del seed base (las instrucciones en
-`description` siguen en inglés). Se carga igual, desde la misma Terminal:
+a los enums de BOX iT en `prisma/data/exercises-wrkout.json`, con nombres e
+instrucciones traducidos al español y sin los duplicados del seed base. Se
+carga igual, desde la misma Terminal:
 
 ```bash
 node --experimental-strip-types prisma/seed-wrkout.ts
 ```
 
-También idempotente y no destructivo (`createMany` + `skipDuplicates`: lo que ya
-existe por nombre no se toca). En local: `pnpm db:seed:wrkout`.
+También idempotente (upsert por nombre: crea los que faltan y actualiza los
+datos de los existentes; nunca borra). En local: `pnpm db:seed:wrkout`.
 
 ### 5. Updates
 Push a `main` → **Deploy** en Easypanel (o auto-deploy si lo activás). Las
