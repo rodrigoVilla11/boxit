@@ -97,6 +97,18 @@ node --experimental-strip-types prisma/seed.ts
 Usa el `DATABASE_URL` del contenedor y es idempotente (`upsert`), así que si lo
 corrés de más no pasa nada. (No hace falta exponer la base ni ts-node.)
 
+**Librería extendida (opcional, ~736 ejercicios más).** El dataset de
+[wrkout/exercises.json](https://github.com/wrkout/exercises.json) viene mapeado
+a los enums de BOX iT en `prisma/data/exercises-wrkout.json` (nombres e
+instrucciones en inglés). Se carga igual, desde la misma Terminal:
+
+```bash
+node --experimental-strip-types prisma/seed-wrkout.ts
+```
+
+También idempotente y no destructivo (`createMany` + `skipDuplicates`: lo que ya
+existe por nombre no se toca). En local: `pnpm db:seed:wrkout`.
+
 ### 5. Updates
 Push a `main` → **Deploy** en Easypanel (o auto-deploy si lo activás). Las
 migraciones nuevas se aplican solas.

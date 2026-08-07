@@ -11,6 +11,7 @@
     "db:migrate": "pnpm --filter @box-it/api prisma:migrate",
     "db:deploy": "pnpm --filter @box-it/api prisma:deploy",
     "db:seed": "pnpm --filter @box-it/api prisma:seed",
+    "db:seed:wrkout": "pnpm --filter @box-it/api prisma:seed:wrkout",
     "db:reset": "pnpm --filter @box-it/api prisma:reset",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint"
