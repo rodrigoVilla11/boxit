@@ -94,7 +94,10 @@ export class RemindersService {
     return { sent, message };
   }
 
-  /** "Hoy toca …" del plan activo. Devuelve el mensaje y cuántos push salieron. */
+  /**
+   * "Hoy toca …": junta el plan semanal activo y las sesiones del calendario
+   * programadas para hoy. Devuelve el mensaje y cuántos push salieron.
+   */
   async sendTodayReminder(
     userId: string,
     nowMs = Date.now(),
@@ -103,6 +106,7 @@ export class RemindersService {
       where: { id: userId },
       select: { timezoneOffsetMin: true },
     });
+    const offsetMin = user?.timezoneOffsetMin ?? null;
     const plan = await this.prisma.weeklyPlan.findFirst({
       where: { userId, active: true },
       include: {
@@ -114,15 +118,30 @@ export class RemindersService {
         },
       },
     });
-    if (!plan) return { sent: 0, message: null };
 
-    const dow = this.localDow(nowMs, user?.timezoneOffsetMin ?? null);
-    const items = plan.items.filter(
+    const dow = this.localDow(nowMs, offsetMin);
+    const items = (plan?.items ?? []).filter(
       (i) => i.dayOfWeek === dow && i.kind !== 'REST',
     );
-    if (items.length === 0) return { sent: 0, message: null };
 
-    const names = items
+    // sesiones del calendario del día local (guardadas a mediodía UTC)
+    const sessions = await this.prisma.scheduledSession.findMany({
+      where: {
+        userId,
+        date: new Date(`${this.localDayStr(nowMs, offsetMin)}T12:00:00.000Z`),
+        kind: { not: 'REST' },
+      },
+      orderBy: { order: 'asc' },
+      include: {
+        routine: { select: { name: true } },
+        cardioRoutine: { select: { name: true } },
+      },
+    });
+    if (items.length === 0 && sessions.length === 0) {
+      return { sent: 0, message: null };
+    }
+
+    const names = [...items, ...sessions]
       .map((i) =>
         i.kind === 'ROUTINE'
           ? i.routine?.name ?? 'Rutina'
@@ -148,5 +167,18 @@ export class RemindersService {
   private localDow(nowMs: number, offsetMin: number | null): number {
     if (offsetMin == null) return (new Date(nowMs).getDay() + 6) % 7;
     return (new Date(nowMs - offsetMin * 60_000).getUTCDay() + 6) % 7;
+  }
+
+  /** Día local YYYY-MM-DD según el offset (para buscar en el calendario). */
+  private localDayStr(nowMs: number, offsetMin: number | null): string {
+    const d =
+      offsetMin == null ? new Date(nowMs) : new Date(nowMs - offsetMin * 60_000);
+    if (offsetMin == null) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    return d.toISOString().slice(0, 10);
   }
 }

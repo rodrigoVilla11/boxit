@@ -2,12 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ClipboardList, Dumbbell, History, TrendingUp } from 'lucide-react';
+import {
+  CalendarDays,
+  ClipboardList,
+  Dumbbell,
+  History,
+  TrendingUp,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const TABS = [
   { href: '/entreno', label: 'Entreno', icon: Dumbbell },
   { href: '/rutinas', label: 'Rutinas', icon: ClipboardList },
+  { href: '/calendario', label: 'Agenda', icon: CalendarDays },
   { href: '/historial', label: 'Historial', icon: History },
   { href: '/progreso', label: 'Progreso', icon: TrendingUp },
 ] as const;

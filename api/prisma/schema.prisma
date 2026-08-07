@@ -103,6 +103,8 @@ model User {
   weeklyPlans       WeeklyPlan[]
   cardioRoutines    CardioRoutine[]
   pushSubscriptions PushSubscription[]
+  trainingPrograms  TrainingProgram[]
+  scheduledSessions ScheduledSession[]
 }
 
 // Suscripción de un dispositivo a Web Push (una por endpoint del navegador).
@@ -164,6 +166,7 @@ model Routine {
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises RoutineExercise[]
   planItems PlanItem[] // referencias desde planes semanales
+  scheduledSessions ScheduledSession[] // referencias desde el calendario
 
   @@index([userId])
 }
@@ -317,6 +320,7 @@ model CardioRoutine {
   user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   intervals CardioRoutineInterval[]
   planItems PlanItem[]
+  scheduledSessions ScheduledSession[]
 
   @@index([userId])
 }
@@ -374,4 +378,51 @@ model PlanItem {
   cardioRoutine CardioRoutine? @relation(fields: [cardioRoutineId], references: [id], onDelete: SetNull)
 
   @@index([planId])
+}
+
+// ------------------- Calendario / programas ----------------------
+// A diferencia del plan semanal (cíclico, sin fechas), el calendario programa
+// sesiones en FECHAS absolutas. Un programa agrupa las sesiones de un plan
+// multi-semana (ej. "16 semanas de natación") para poder listarlo y borrarlo
+// de una; las sesiones sueltas viven sin programa (programId null).
+
+model TrainingProgram {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions ScheduledSession[]
+
+  @@index([userId])
+}
+
+model ScheduledSession {
+  id        String       @id @default(cuid())
+  userId    String
+  programId String?
+  // sólo importa el día; se guarda a mediodía UTC (misma convención que birthDate)
+  date      DateTime
+  order     Int          @default(1) // orden dentro del día
+  kind      PlanItemKind
+  routineId         String?
+  cardioRoutineId   String?
+  activityType      ActivityType?
+  targetDistanceM   Int? // objetivo de distancia (metros)
+  targetDurationSec Int? // objetivo de tiempo (segundos)
+  note              String?
+  createdAt         DateTime @default(now())
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Borrar el programa borra sus sesiones (es "sacar el plan del calendario").
+  program TrainingProgram? @relation(fields: [programId], references: [id], onDelete: Cascade)
+  // Borrar una plantilla no mutila el calendario (igual que en PlanItem).
+  routine       Routine?       @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  cardioRoutine CardioRoutine? @relation(fields: [cardioRoutineId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([programId])
 }

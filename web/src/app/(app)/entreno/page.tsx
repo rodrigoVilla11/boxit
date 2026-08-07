@@ -34,6 +34,11 @@ import { ExercisePicker } from '@/components/workout/exercise-picker';
 import { ActivityForm, type ActivityPrefill } from '@/components/activity/activity-form';
 import { startRoutine } from '@/lib/routines';
 import { getPlans, itemTargets, type PlanItem, type WeeklyPlan } from '@/lib/plans';
+import {
+  getSchedule,
+  sessionTargets,
+  type ScheduledSession,
+} from '@/lib/schedule';
 import { activityIcon, activityLabel, formatDistance } from '@/lib/activity';
 import { formatDuration } from '@/lib/format';
 import { todayDow } from '@/lib/week';
@@ -84,6 +89,13 @@ export default function EntrenoPage() {
       .catch(() => {});
   }, []);
 
+  // Calendario → sesiones programadas para hoy (se suman al "hoy toca")
+  const [todaySessions, setTodaySessions] = useState<ScheduledSession[]>([]);
+  useEffect(() => {
+    const today = new Date();
+    getSchedule(today, today).then(setTodaySessions).catch(() => {});
+  }, []);
+
   async function onStartPlanRoutine(routineId: string) {
     if (startingRoutine) return;
     setPlanError(null);
@@ -106,6 +118,18 @@ export default function EntrenoPage() {
       targetDistanceM: distanceM,
       targetDurationSec: durationSec,
       intervals: item.cardioRoutine?.intervals,
+    });
+    setActivityOpen(true);
+  }
+
+  function openScheduledActivity(s: ScheduledSession) {
+    const { type, distanceM, durationSec } = sessionTargets(s);
+    setActivityPrefill({
+      type: type ?? undefined,
+      label: s.cardioRoutine?.name ?? null,
+      targetDistanceM: distanceM,
+      targetDurationSec: durationSec,
+      intervals: s.cardioRoutine?.intervals,
     });
     setActivityOpen(true);
   }
@@ -234,8 +258,11 @@ export default function EntrenoPage() {
     const todayItems = activePlan
       ? activePlan.items.filter((i) => i.dayOfWeek === todayDow())
       : [];
-    const hasPlan = todayItems.some((i) => i.kind !== 'REST');
-    const onlyRest = todayItems.length > 0 && !hasPlan;
+    const todaySched = todaySessions.filter((s) => s.kind !== 'REST');
+    const hasPlan =
+      todayItems.some((i) => i.kind !== 'REST') || todaySched.length > 0;
+    const onlyRest =
+      !hasPlan && (todayItems.length > 0 || todaySessions.length > 0);
 
     return (
       <div className="relative flex min-h-dvh flex-col items-center justify-center px-2 pb-16 text-center">
@@ -306,6 +333,55 @@ export default function EntrenoPage() {
                     <span className="min-w-0 flex-1 truncate text-left">
                       <span className="font-semibold text-text">
                         {item.cardioRoutine?.name ??
+                          (type ? activityLabel(type) : 'Cardio')}
+                      </span>
+                      {target && <span className="text-textMuted"> · {target}</span>}
+                    </span>
+                    <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
+                  </button>
+                );
+              })}
+              {todaySched.map((s) => {
+                if (s.kind === 'ROUTINE') {
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => s.routineId && onStartPlanRoutine(s.routineId)}
+                      disabled={!s.routineId || startingRoutine}
+                      className="flex w-full items-center gap-3 rounded-xl bg-surfaceRaised p-3 transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Dumbbell className="h-5 w-5 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1 truncate text-left font-semibold text-text">
+                        {s.routine?.name ?? 'Rutina eliminada'}
+                      </span>
+                      {startingRoutine ? (
+                        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+                      ) : (
+                        <ArrowRight className="h-5 w-5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  );
+                }
+                const { type, distanceM, durationSec } = sessionTargets(s);
+                const Icon = type ? activityIcon(type) : Waves;
+                const target = [
+                  distanceM && type ? formatDistance(distanceM, type) : '',
+                  durationSec ? formatDuration(durationSec) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => openScheduledActivity(s)}
+                    className="flex w-full items-center gap-3 rounded-xl bg-surfaceRaised p-3 transition active:scale-[0.98]"
+                  >
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      <span className="font-semibold text-text">
+                        {s.cardioRoutine?.name ??
                           (type ? activityLabel(type) : 'Cardio')}
                       </span>
                       {target && <span className="text-textMuted"> · {target}</span>}
