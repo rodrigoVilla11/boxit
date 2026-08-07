@@ -5,8 +5,11 @@ export type RoutineExercise = {
   id: string;
   order: number;
   exerciseId: string;
+  supersetGroup: number | null;
   targetSets: number;
+  // targetReps = valor único o mínimo del rango; targetRepsMax = tope (null = único)
   targetReps: number | null;
+  targetRepsMax: number | null;
   targetWeight: number | null;
   restSeconds: number | null;
   note: string | null;
@@ -23,7 +26,9 @@ export type Routine = {
 export type RoutineExerciseInput = {
   exerciseId: string;
   targetSets: number;
+  supersetGroup?: number | null;
   targetReps?: number | null;
+  targetRepsMax?: number | null;
   targetWeight?: number | null;
   restSeconds?: number | null;
   note?: string | null;

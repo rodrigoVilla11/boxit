@@ -12,16 +12,31 @@ import { RoutineExerciseInput } from './dto/routine-exercise.input';
 
 /** Mapea los ejercicios del DTO a filas `RoutineExercise` (order = índice + 1). */
 function toRoutineExerciseRows(exercises: RoutineExerciseInput[]) {
-  return exercises.map((e, i) => ({
-    exerciseId: e.exerciseId,
-    order: i + 1,
-    supersetGroup: e.supersetGroup ?? null,
-    targetSets: e.targetSets,
-    targetReps: e.targetReps ?? null,
-    targetWeight: e.targetWeight ?? null,
-    restSeconds: e.restSeconds ?? null,
-    note: e.note?.trim() || null,
-  }));
+  return exercises.map((e, i) => {
+    // Normaliza el rango de reps: sin mínimo el tope pasa a ser el valor único;
+    // rango invertido se da vuelta; rango degenerado (min = max) queda como único.
+    let repsMin = e.targetReps ?? null;
+    let repsMax = e.targetRepsMax ?? null;
+    if (repsMin === null && repsMax !== null) {
+      repsMin = repsMax;
+      repsMax = null;
+    }
+    if (repsMin !== null && repsMax !== null) {
+      if (repsMax < repsMin) [repsMin, repsMax] = [repsMax, repsMin];
+      if (repsMax === repsMin) repsMax = null;
+    }
+    return {
+      exerciseId: e.exerciseId,
+      order: i + 1,
+      supersetGroup: e.supersetGroup ?? null,
+      targetSets: e.targetSets,
+      targetReps: repsMin,
+      targetRepsMax: repsMax,
+      targetWeight: e.targetWeight ?? null,
+      restSeconds: e.restSeconds ?? null,
+      note: e.note?.trim() || null,
+    };
+  });
 }
 
 const fullRoutineInclude = {
@@ -119,6 +134,7 @@ export class RoutinesService {
             supersetGroup: re.supersetGroup,
             // Copia los objetivos de la rutina como guía durante el entreno
             targetReps: re.targetReps,
+            targetRepsMax: re.targetRepsMax,
             targetWeight: re.targetWeight,
             restSeconds: re.restSeconds,
             // Prefila cada serie con los objetivos de la rutina (si los hay)

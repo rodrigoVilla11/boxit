@@ -52,9 +52,11 @@ export function ExerciseCard({
   const { unit } = useUnit();
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // Guía de la rutina (si el entreno salió de una): "Meta 8 reps · 80 kg"
+  // Guía de la rutina (si el entreno salió de una): "Meta 8-12 reps · 80 kg"
   const targetText = [
-    we.targetReps ? `${we.targetReps} reps` : '',
+    we.targetReps
+      ? `${we.targetReps}${we.targetRepsMax ? `-${we.targetRepsMax}` : ''} reps`
+      : '',
     we.targetWeight
       ? `${roundDisplay(kgToDisplay(we.targetWeight, unit))} ${unitLabel(unit)}`
       : '',

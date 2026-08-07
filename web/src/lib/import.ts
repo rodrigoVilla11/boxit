@@ -14,6 +14,7 @@ type RawExercise = {
   exercise?: { name?: string };
   order?: number;
   targetReps?: number | null;
+  targetRepsMax?: number | null;
   targetWeight?: number | null;
   restSeconds?: number | null;
   supersetGroup?: number | null;
@@ -57,6 +58,7 @@ export async function importWorkoutsFromFile(file: File): Promise<number> {
         name: we.exercise?.name,
         order: we.order ?? i + 1,
         targetReps: we.targetReps ?? null,
+        targetRepsMax: we.targetRepsMax ?? null,
         targetWeight: we.targetWeight ?? null,
         restSeconds: we.restSeconds ?? null,
         supersetGroup: we.supersetGroup ?? null,

@@ -32,8 +32,10 @@ export type WorkoutExercise = {
   exercise: Exercise;
   // superserie: mismo entero = mismo grupo; null = suelto. Letra derivada en UI.
   supersetGroup: number | null;
-  // objetivos de la rutina (guía); null en alta manual
+  // objetivos de la rutina (guía); null en alta manual.
+  // targetReps = valor único o mínimo del rango; targetRepsMax = tope (null = único)
   targetReps: number | null;
+  targetRepsMax: number | null;
   targetWeight: number | null;
   restSeconds: number | null;
   sets: WorkoutSet[];

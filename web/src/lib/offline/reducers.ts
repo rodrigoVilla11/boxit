@@ -80,6 +80,7 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
         supersetGroup: null,
         // alta manual: sin objetivos (los targets llegan al empezar una rutina)
         targetReps: null,
+        targetRepsMax: null,
         targetWeight: null,
         restSeconds: null,
         sets: [freshSet(op.setId, 1)],
@@ -98,6 +99,7 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
                 exerciseId: op.exercise.id,
                 exercise: op.exercise,
                 targetReps: null,
+                targetRepsMax: null,
                 targetWeight: null,
                 restSeconds: null,
                 sets: [freshSet(op.setId, 1)],

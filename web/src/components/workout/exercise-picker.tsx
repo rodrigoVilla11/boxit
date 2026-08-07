@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dumbbell, Info, Loader2, Plus, Search, X } from 'lucide-react';
+import { Check, Dumbbell, Info, Loader2, Plus, Search, X } from 'lucide-react';
 import { deleteExercise, getExercises, type Exercise } from '@/lib/workouts';
 import { equipmentLabel, muscleLabel } from '@/lib/labels';
 import { ExerciseDetail } from '@/components/progress/exercise-detail';
@@ -20,11 +20,13 @@ export function ExercisePicker({
   onClose,
   onPick,
   closeOnPick = true,
+  selectedIds,
 }: {
   open: boolean;
   onClose: () => void;
   onPick: (exercise: Exercise) => void | Promise<void>;
   closeOnPick?: boolean;
+  selectedIds?: string[];
 }) {
   const [items, setItems] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
@@ -64,6 +66,8 @@ export function ExercisePicker({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const selected = useMemo(() => new Set(selectedIds ?? []), [selectedIds]);
 
   const filtered = useMemo(() => {
     if (!items) return [];
@@ -163,9 +167,17 @@ export function ExercisePicker({
                   disabled={adding !== null}
                   className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left transition active:scale-[0.99] disabled:opacity-60"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-accentLime">
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                      selected.has(e.id)
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-surfaceRaised text-accentLime'
+                    }`}
+                  >
                     {adding === e.id ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : selected.has(e.id) ? (
+                      <Check className="h-5 w-5" />
                     ) : (
                       <Dumbbell className="h-5 w-5" />
                     )}
@@ -192,6 +204,21 @@ export function ExercisePicker({
           </ul>
         )}
       </div>
+
+      {!closeOnPick && (
+        <div className="app-shell w-full px-4 pb-safe">
+          <button
+            type="button"
+            onClick={onClose}
+            className="mb-4 mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary font-semibold text-ink transition hover:bg-primary-deep active:scale-[0.99]"
+          >
+            <Check className="h-5 w-5" />
+            Listo
+            {(selectedIds?.length ?? 0) > 0 &&
+              ` · ${selectedIds!.length} ejercicio${selectedIds!.length === 1 ? '' : 's'}`}
+          </button>
+        </div>
+      )}
 
       <ExerciseDetail
         exercise={detail}

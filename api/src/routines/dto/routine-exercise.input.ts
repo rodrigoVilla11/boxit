@@ -25,12 +25,19 @@ export class RoutineExerciseInput {
   @Min(1)
   supersetGroup?: number | null;
 
-  // Objetivos opcionales por serie (peso siempre en kg)
+  // Objetivos opcionales por serie (peso siempre en kg).
+  // targetReps es el valor único o el mínimo del rango; targetRepsMax el tope.
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1000)
   targetReps?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  targetRepsMax?: number | null;
 
   @IsOptional()
   @IsNumber()

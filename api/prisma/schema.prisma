@@ -178,7 +178,8 @@ model RoutineExercise {
   order         Int
   supersetGroup Int? // misma superserie = mismo entero (letra derivada en el front)
   targetSets    Int    @default(3)
-  targetReps    Int? // objetivo de reps por serie (opcional)
+  targetReps    Int? // objetivo de reps por serie: valor único o mínimo del rango (opcional)
+  targetRepsMax Int? // tope del rango de reps; null = valor único (opcional)
   targetWeight  Float? // objetivo de peso por serie, en kg (opcional)
   restSeconds   Int? // descanso sugerido entre series (opcional)
   note          String? // nota del ejercicio en la rutina
@@ -219,9 +220,10 @@ model WorkoutExercise {
   supersetGroup Int?
   // Objetivos copiados de la rutina al empezar (guía durante el entreno).
   // Null en alta manual. No se recalculan si la rutina cambia después.
-  targetReps   Int?
-  targetWeight Float? // en kg
-  restSeconds  Int?
+  targetReps    Int? // valor único o mínimo del rango
+  targetRepsMax Int? // tope del rango de reps; null = valor único
+  targetWeight  Float? // en kg
+  restSeconds   Int?
 
   workout  Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise Exercise     @relation(fields: [exerciseId], references: [id])

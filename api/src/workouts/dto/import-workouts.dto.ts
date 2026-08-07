@@ -68,6 +68,10 @@ class ImportExerciseDto {
   targetReps?: number | null;
 
   @IsOptional()
+  @IsInt()
+  targetRepsMax?: number | null;
+
+  @IsOptional()
   @IsNumber()
   targetWeight?: number | null;
 

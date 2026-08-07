@@ -444,6 +444,7 @@ export class WorkoutsService {
             order: we.order,
             supersetGroup: we.supersetGroup,
             targetReps: we.targetReps,
+            targetRepsMax: we.targetRepsMax,
             targetWeight: we.targetWeight,
             restSeconds: we.restSeconds,
             sets: {
@@ -493,6 +494,7 @@ export class WorkoutsService {
               exerciseId,
               order: we.order ?? i + 1,
               targetReps: we.targetReps ?? null,
+              targetRepsMax: we.targetRepsMax ?? null,
               targetWeight: we.targetWeight ?? null,
               restSeconds: we.restSeconds ?? null,
               supersetGroup: we.supersetGroup ?? null,
@@ -624,6 +626,7 @@ export class WorkoutsService {
       data: {
         exerciseId: dto.exerciseId,
         targetReps: null,
+        targetRepsMax: null,
         targetWeight: null,
         restSeconds: null,
         sets: {

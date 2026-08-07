@@ -23,6 +23,12 @@ export default function EditarRutinaPage() {
           items: r.exercises.map((e) => ({
             exercise: e.exercise,
             targetSets: e.targetSets,
+            targetReps: e.targetReps,
+            targetRepsMax: e.targetRepsMax,
+            targetWeight: e.targetWeight,
+            restSeconds: e.restSeconds,
+            note: e.note,
+            supersetGroup: e.supersetGroup,
           })),
         }),
       )
