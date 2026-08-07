@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Dumbbell, Info, Loader2, Plus, Search, X } from 'lucide-react';
 import { deleteExercise, getExercises, type Exercise } from '@/lib/workouts';
-import { equipmentLabel, muscleLabel } from '@/lib/labels';
+import { EQUIPMENT_KEYS, MUSCLE_KEYS, equipmentLabel, muscleLabel } from '@/lib/labels';
+import { cn } from '@/lib/cn';
 import { ExerciseDetail } from '@/components/progress/exercise-detail';
 import { ExerciseForm } from '@/components/progress/exercise-form';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -14,6 +15,43 @@ const normalize = (s: string): string =>
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
+
+function ChipRow({
+  allLabel,
+  keys,
+  label,
+  value,
+  onChange,
+}: {
+  allLabel: string;
+  keys: string[];
+  label: (k: string) => string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const chipCls = (active: boolean) =>
+    cn(
+      'shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition',
+      active ? 'bg-primary text-ink' : 'bg-surfaceRaised text-textMuted hover:text-text',
+    );
+  return (
+    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <button type="button" onClick={() => onChange(null)} className={chipCls(value === null)}>
+        {allLabel}
+      </button>
+      {keys.map((k) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => onChange(value === k ? null : k)}
+          className={chipCls(value === k)}
+        >
+          {label(k)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function ExercisePicker({
   open,
@@ -30,6 +68,8 @@ export function ExercisePicker({
 }) {
   const [items, setItems] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
+  const [muscle, setMuscle] = useState<string | null>(null);
+  const [equipmentFilter, setEquipmentFilter] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -59,6 +99,8 @@ export function ExercisePicker({
   useEffect(() => {
     if (!open) return;
     setQuery('');
+    setMuscle(null);
+    setEquipmentFilter(null);
     if (items === null) {
       getExercises()
         .then(setItems)
@@ -71,14 +113,49 @@ export function ExercisePicker({
 
   const filtered = useMemo(() => {
     if (!items) return [];
+    let list = items;
+    if (muscle) {
+      list = list.filter(
+        (e) => e.primaryMuscle === muscle || e.secondaryMuscles.includes(muscle),
+      );
+    }
+    if (equipmentFilter) list = list.filter((e) => e.equipment === equipmentFilter);
+
     const q = normalize(query.trim());
-    if (!q) return items;
-    return items.filter(
-      (e) =>
-        normalize(e.name).includes(q) ||
-        normalize(muscleLabel(e.primaryMuscle)).includes(q),
-    );
-  }, [items, query]);
+    if (!q) {
+      // Con filtro de músculo, primero los que lo trabajan como principal
+      return muscle
+        ? [...list].sort(
+            (a, b) =>
+              Number(b.primaryMuscle === muscle) - Number(a.primaryMuscle === muscle),
+          )
+        : list;
+    }
+
+    // Búsqueda por palabras (sin tildes): todas deben aparecer en nombre,
+    // músculos (principal o secundarios) o equipamiento. Mejor match primero.
+    const tokens = q.split(/\s+/);
+    const scored: { e: Exercise; score: number }[] = [];
+    for (const e of list) {
+      const name = normalize(e.name);
+      const extra = [e.primaryMuscle, ...e.secondaryMuscles]
+        .map((m) => normalize(muscleLabel(m)))
+        .concat(normalize(equipmentLabel(e.equipment)))
+        .join(' ');
+      if (!tokens.every((t) => name.includes(t) || extra.includes(t))) continue;
+      const inName = tokens.every((t) => name.includes(t));
+      const nameWords = name.split(/\s+/);
+      const score = name.startsWith(q)
+        ? 0 // el nombre empieza con lo buscado
+        : inName && tokens.every((t) => nameWords.some((w) => w.startsWith(t)))
+          ? 1 // cada palabra buscada inicia una palabra del nombre
+          : inName
+            ? 2 // aparece en el nombre
+            : 3; // matchea solo por músculo/equipamiento
+      scored.push({ e, score });
+    }
+    return scored.sort((a, b) => a.score - b.score).map((s) => s.e);
+  }, [items, query, muscle, equipmentFilter]);
 
   async function pick(exercise: Exercise) {
     setAdding(exercise.id);
@@ -128,6 +205,22 @@ export function ExercisePicker({
             className="h-11 w-full rounded-2xl bg-surfaceRaised pl-9 pr-4 text-base text-text outline-none ring-1 ring-white/5 placeholder:text-textMuted/70 focus:ring-2 focus:ring-primary"
           />
         </div>
+        <div className="mt-2.5 space-y-1.5">
+          <ChipRow
+            allLabel="Todos"
+            keys={MUSCLE_KEYS}
+            label={muscleLabel}
+            value={muscle}
+            onChange={setMuscle}
+          />
+          <ChipRow
+            allLabel="Cualquier equipo"
+            keys={EQUIPMENT_KEYS}
+            label={equipmentLabel}
+            value={equipmentFilter}
+            onChange={setEquipmentFilter}
+          />
+        </div>
       </header>
 
       <div className="app-shell w-full flex-1 overflow-y-auto overscroll-contain px-4 pb-safe pt-3">
@@ -154,9 +247,24 @@ export function ExercisePicker({
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="py-10 text-center text-sm text-textMuted">
-            No encontramos ejercicios.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <p className="text-sm text-textMuted">
+              No encontramos ejercicios con esa búsqueda.
+            </p>
+            {(query || muscle || equipmentFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setMuscle(null);
+                  setEquipmentFilter(null);
+                }}
+                className="text-sm font-semibold text-primary transition hover:text-primary-deep"
+              >
+                Limpiar búsqueda y filtros
+              </button>
+            )}
+          </div>
         ) : (
           <ul className="space-y-1.5 pb-6">
             {filtered.map((e) => (
@@ -238,6 +346,10 @@ export function ExercisePicker({
           onSaved={() => {
             setFormOpen(false);
             setNotice(null);
+            // limpia búsqueda y filtros para que el ejercicio nuevo quede visible
+            setQuery('');
+            setMuscle(null);
+            setEquipmentFilter(null);
             reload();
           }}
         />
