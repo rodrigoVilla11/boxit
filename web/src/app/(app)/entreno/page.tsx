@@ -174,8 +174,9 @@ export default function EntrenoPage() {
     if (!ok) return;
     if (patch.completed === true) {
       // En superserie no se descansa entre miembros: sólo tras el último del grupo.
+      // El descanso del ejercicio (si la rutina lo define) pisa el default global.
       const ss = ex && wo.workout ? supersetMap(wo.workout.exercises)[ex.id] : undefined;
-      if (!(ss?.letter && ss.position !== 'last')) rest.start();
+      if (!(ss?.letter && ss.position !== 'last')) rest.start(ex?.restSeconds ?? undefined);
       // ¿Récord? Compará el peso/reps recién completados con el mejor previo.
       if (
         ex &&

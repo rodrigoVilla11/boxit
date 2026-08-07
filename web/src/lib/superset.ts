@@ -1,10 +1,12 @@
-import type { WorkoutExercise } from './workouts';
-
 export type SupersetInfo = {
   letter: string | null; // A/B/C si está en una superserie (≥2 miembros); null si suelto
   position: 'solo' | 'first' | 'middle' | 'last';
   group: number | null;
 };
+
+// Estructural a propósito: sirve para WorkoutExercise y para los drafts del
+// form de rutina (cualquier cosa con id + supersetGroup).
+type SupersetSource = { id: string; supersetGroup: number | null };
 
 /**
  * Deriva por ejercicio su letra de superserie y posición en el grupo. Sólo los
@@ -13,7 +15,7 @@ export type SupersetInfo = {
  * un grupo son contiguos (garantizado por "agrupar con el siguiente").
  */
 export function supersetMap(
-  exercises: WorkoutExercise[],
+  exercises: SupersetSource[],
 ): Record<string, SupersetInfo> {
   const counts = new Map<number, number>();
   for (const e of exercises) {
@@ -53,7 +55,7 @@ export function supersetMap(
 }
 
 /** Próximo id de grupo libre (máximo actual + 1). */
-export function nextSupersetGroup(exercises: WorkoutExercise[]): number {
+export function nextSupersetGroup(exercises: SupersetSource[]): number {
   let max = 0;
   for (const e of exercises) {
     if (e.supersetGroup != null && e.supersetGroup > max) max = e.supersetGroup;
