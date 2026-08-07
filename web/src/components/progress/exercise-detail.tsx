@@ -40,7 +40,7 @@ export function ExerciseDetail({
     >
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-2 pt-4">
-          <h2 className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-text">
+          <h2 className="min-w-0 flex-1 break-words font-display text-lg font-semibold text-text">
             {exercise.name}
           </h2>
           {exercise.editable && (

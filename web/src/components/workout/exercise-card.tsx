@@ -112,7 +112,7 @@ export function ExerciseCard({
                 aria-label={`Ver historial de ${we.exercise.name}`}
                 className="flex max-w-full items-center gap-1.5 text-left"
               >
-                <span className="truncate">{we.exercise.name}</span>
+                <span className="min-w-0 break-words">{we.exercise.name}</span>
                 <History className="h-3.5 w-3.5 shrink-0 text-textMuted" />
               </button>
             </h3>

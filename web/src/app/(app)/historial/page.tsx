@@ -154,7 +154,7 @@ function RecordsSection({ prs }: { prs: PersonalRecord[] }) {
             key={pr.exerciseId}
             className="min-w-[9.5rem] shrink-0 rounded-2xl border border-accentLime/25 bg-surface p-3"
           >
-            <p className="truncate text-xs text-textMuted">{pr.exerciseName}</p>
+            <p className="break-words text-xs text-textMuted">{pr.exerciseName}</p>
             <p className="mt-1 font-display text-lg font-bold text-accentLime">
               {pr.metric === 'weight' ? formatWeight(pr.weight, unit) : `${pr.reps} reps`}
             </p>

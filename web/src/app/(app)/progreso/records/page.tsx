@@ -74,7 +74,7 @@ function RecordCard({ r, unit }: { r: ExerciseRecords; unit: 'KG' | 'LB' }) {
     <section className="rounded-2xl bg-surface p-3 shadow-card">
       <header className="mb-2 flex items-center gap-2 px-1">
         <Dumbbell className="h-4 w-4 shrink-0 text-primary" />
-        <h2 className="truncate font-display text-base font-semibold text-text">
+        <h2 className="min-w-0 break-words font-display text-base font-semibold text-text">
           {r.exerciseName}
         </h2>
       </header>

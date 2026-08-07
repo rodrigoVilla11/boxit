@@ -15,6 +15,7 @@ import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator
 import { ScheduleService } from './schedule.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { DuplicateWeekDto } from './dto/duplicate-week.dto';
 import { ScheduleRangeQuery } from './dto/schedule-range.query';
 
 @UseGuards(JwtAuthGuard)
@@ -30,6 +31,11 @@ export class ScheduleController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateSessionDto) {
     return this.schedule.createSession(user.id, dto);
+  }
+
+  @Post('duplicate-week')
+  duplicateWeek(@CurrentUser() user: AuthUser, @Body() dto: DuplicateWeekDto) {
+    return this.schedule.duplicateWeek(user.id, dto);
   }
 
   @Patch(':id')

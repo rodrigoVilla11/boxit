@@ -57,7 +57,7 @@ export function ExerciseHistorySheet({
       <header className="app-shell w-full px-4 pt-safe">
         <div className="flex items-center gap-2 pt-4">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-lg font-semibold text-text">
+            <h2 className="break-words font-display text-lg font-semibold text-text">
               {exerciseName}
             </h2>
             <p className="text-sm text-textMuted">Historial por sesión</p>

@@ -291,7 +291,7 @@ export function ExercisePicker({
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-text">
+                    <span className="block break-words font-medium text-text">
                       {e.name}
                     </span>
                     <span className="block truncate text-xs text-textMuted">

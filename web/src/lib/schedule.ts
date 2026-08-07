@@ -121,6 +121,25 @@ export async function updateSession(
   return json<ScheduledSession>(res, 'No pudimos guardar la sesión.');
 }
 
+/**
+ * Copia todas las sesiones de la semana del lunes `weekStart` a las próximas
+ * `weeks` semanas. Devuelve cuántas sesiones se programaron.
+ */
+export async function duplicateWeek(
+  weekStart: Date,
+  weeks: number,
+): Promise<number> {
+  const res = await apiFetch('/api/schedule/duplicate-week', {
+    method: 'POST',
+    body: JSON.stringify({ weekStart: toDayStr(weekStart), weeks }),
+  });
+  const data = await json<{ created: number }>(
+    res,
+    'No pudimos duplicar la semana.',
+  );
+  return data.created;
+}
+
 export async function deleteSession(id: string): Promise<void> {
   const res = await apiFetch(`/api/schedule/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('No pudimos borrar la sesión.');

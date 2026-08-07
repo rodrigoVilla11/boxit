@@ -68,7 +68,9 @@ type Item = {
   repsMin: string;
   repsMax: string;
   weight: string;
-  restSeconds: number | null;
+  // descanso como min + seg (texto); se combinan en restSeconds al guardar
+  restMin: string;
+  restSec: string;
   note: string | null;
   supersetGroup: number | null;
 };
@@ -110,7 +112,14 @@ export function RoutineForm({
         it.targetWeight != null
           ? String(roundDisplay(kgToDisplay(it.targetWeight, unit)))
           : '',
-      restSeconds: it.restSeconds ?? null,
+      restMin:
+        it.restSeconds != null && it.restSeconds >= 60
+          ? String(Math.floor(it.restSeconds / 60))
+          : '',
+      restSec:
+        it.restSeconds != null && it.restSeconds % 60 !== 0
+          ? String(it.restSeconds % 60)
+          : '',
       note: it.note ?? null,
       supersetGroup: it.supersetGroup ?? null,
     })),
@@ -131,7 +140,8 @@ export function RoutineForm({
         repsMin: '',
         repsMax: '',
         weight: '',
-        restSeconds: null,
+        restMin: '',
+        restSec: '',
         note: null,
         supersetGroup: null,
       },
@@ -201,6 +211,7 @@ export function RoutineForm({
       if (repsMax === repsMin) repsMax = null;
     }
     const w = floatOrNull(it.weight);
+    const rest = (intOrNull(it.restMin) ?? 0) * 60 + (intOrNull(it.restSec) ?? 0);
     return {
       exerciseId: it.exercise.id,
       targetSets: it.targetSets,
@@ -208,7 +219,7 @@ export function RoutineForm({
       targetReps: repsMin,
       targetRepsMax: repsMax,
       targetWeight: w !== null ? Math.min(2000, displayToKg(w, unit)) : null,
-      restSeconds: it.restSeconds,
+      restSeconds: rest > 0 ? Math.min(3600, rest) : null,
       note: it.note,
     };
   }
@@ -379,7 +390,7 @@ function SortableItemCard({
                 Superserie {superset.letter}
               </span>
             )}
-            <p className="truncate font-medium text-text">{it.exercise.name}</p>
+            <p className="break-words font-medium text-text">{it.exercise.name}</p>
             <p className="text-xs text-textMuted">
               {muscleLabel(it.exercise.primaryMuscle)}
             </p>
@@ -487,20 +498,33 @@ function SortableItemCard({
         </div>
 
         <div className="mt-2 flex items-end gap-2">
-          <div className="w-24 shrink-0">
-            <p className="mb-1 text-[11px] font-medium text-textMuted">Descanso (s)</p>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={it.restSeconds != null ? String(it.restSeconds) : ''}
-              onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                onPatch({ restSeconds: v ? Math.min(3600, Number(v)) : null });
-              }}
-              placeholder="—"
-              aria-label="Descanso sugerido en segundos"
-              className={numberInputCls}
-            />
+          <div className="w-28 shrink-0">
+            <p className="mb-1 text-[11px] font-medium text-textMuted">Descanso</p>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={it.restMin}
+                onChange={(e) =>
+                  onPatch({ restMin: e.target.value.replace(/\D/g, '').slice(0, 2) })
+                }
+                placeholder="min"
+                aria-label="Descanso: minutos"
+                className={numberInputCls}
+              />
+              <span className="shrink-0 text-textMuted">:</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={it.restSec}
+                onChange={(e) =>
+                  onPatch({ restSec: e.target.value.replace(/\D/g, '').slice(0, 3) })
+                }
+                placeholder="seg"
+                aria-label="Descanso: segundos"
+                className={numberInputCls}
+              />
+            </div>
           </div>
           <div className="min-w-0 flex-1">
             <p className="mb-1 text-[11px] font-medium text-textMuted">Nota</p>

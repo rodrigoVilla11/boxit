@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { CreateProgramDto } from './dto/create-program.dto';
+import { DuplicateWeekDto } from './dto/duplicate-week.dto';
 import { ScheduledSessionInput } from './dto/scheduled-session.input';
 
 const fullSessionInclude = {
@@ -140,6 +141,69 @@ export class ScheduleService {
       },
       include: fullSessionInclude,
     });
+  }
+
+  /**
+   * Copia todas las sesiones de la semana [weekStart, weekStart+6] a las
+   * próximas `weeks` semanas. Las copias quedan como sesiones sueltas (sin
+   * programa) y se encolan después de lo ya programado en cada día destino.
+   */
+  async duplicateWeek(
+    userId: string,
+    dto: DuplicateWeekDto,
+  ): Promise<{ created: number }> {
+    const start = dateAtNoonUtc(dto.weekStart);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+
+    const source = await this.prisma.scheduledSession.findMany({
+      where: { userId, date: { gte: start, lte: end } },
+      orderBy: [{ date: 'asc' }, { order: 'asc' }],
+    });
+    if (source.length === 0) {
+      throw new BadRequestException(
+        'La semana elegida no tiene sesiones para duplicar.',
+      );
+    }
+
+    // Lo ya programado en el rango destino, para encolar el order al final
+    const targetFrom = new Date(start);
+    targetFrom.setUTCDate(targetFrom.getUTCDate() + 7);
+    const targetTo = new Date(end);
+    targetTo.setUTCDate(targetTo.getUTCDate() + 7 * dto.weeks);
+    const existing = await this.prisma.scheduledSession.groupBy({
+      by: ['date'],
+      where: { userId, date: { gte: targetFrom, lte: targetTo } },
+      _count: { _all: true },
+    });
+    const countByDay = new Map(
+      existing.map((e) => [e.date.getTime(), e._count._all]),
+    );
+
+    const rows: Prisma.ScheduledSessionCreateManyInput[] = [];
+    for (let w = 1; w <= dto.weeks; w++) {
+      for (const s of source) {
+        // setUTCDate sobre mediodía UTC: inmune a cambios de horario
+        const date = new Date(s.date);
+        date.setUTCDate(date.getUTCDate() + 7 * w);
+        const order = (countByDay.get(date.getTime()) ?? 0) + 1;
+        countByDay.set(date.getTime(), order);
+        rows.push({
+          userId,
+          date,
+          order,
+          kind: s.kind,
+          routineId: s.routineId,
+          cardioRoutineId: s.cardioRoutineId,
+          activityType: s.activityType,
+          targetDistanceM: s.targetDistanceM,
+          targetDurationSec: s.targetDurationSec,
+          note: s.note,
+        });
+      }
+    }
+    await this.prisma.scheduledSession.createMany({ data: rows });
+    return { created: rows.length };
   }
 
   async removeSession(userId: string, id: string): Promise<void> {

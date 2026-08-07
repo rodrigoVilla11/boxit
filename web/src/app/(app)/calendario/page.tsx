@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   CalendarPlus,
   ClipboardCheck,
+  CopyPlus,
   Loader2,
   Play,
   Plus,
@@ -27,8 +28,9 @@ import {
   sessionTitle,
 } from '@/components/calendar/session-editor';
 import { ProgramWizard } from '@/components/calendar/program-wizard';
+import { DuplicateWeekSheet } from '@/components/calendar/duplicate-week-sheet';
 import { plural } from '@/lib/plural';
-import { dayKey, startOfDay } from '@/lib/week';
+import { dayKey, mondayOf, startOfDay } from '@/lib/week';
 import { getRoutines, startRoutine, type Routine } from '@/lib/routines';
 import { getCardioRoutines, type CardioRoutine } from '@/lib/cardio-routines';
 import { getHistory, type WorkoutSummary } from '@/lib/workouts';
@@ -66,6 +68,7 @@ export default function CalendarioPage() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [dupOpen, setDupOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<TrainingProgram | null>(null);
   const [registering, setRegistering] = useState<ActivityPrefill | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
@@ -105,6 +108,18 @@ export default function CalendarioPage() {
     }
     return map;
   }, [sessions]);
+
+  // Semana (lunes a domingo) del día seleccionado y cuántas sesiones tiene
+  const weekStart = useMemo(() => mondayOf(selected), [selected]);
+  const weekSessionCount = useMemo(() => {
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      n += sessionsByDay.get(dayKey(d))?.length ?? 0;
+    }
+    return n;
+  }, [weekStart, sessionsByDay]);
 
   const doneDays = useMemo(() => {
     const set = new Set<number>();
@@ -208,14 +223,26 @@ export default function CalendarioPage() {
               <h2 className="text-sm font-semibold capitalize text-textMuted">
                 {dayTitle}
               </h2>
-              <button
-                type="button"
-                onClick={() => setEditorOpen(true)}
-                className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/25 active:scale-95"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Programar
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {weekSessionCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDupOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-xs font-semibold text-textMuted transition hover:text-text active:scale-95"
+                  >
+                    <CopyPlus className="h-3.5 w-3.5" />
+                    Duplicar semana
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEditorOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/25 active:scale-95"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Programar
+                </button>
+              </div>
             </div>
 
             {daySessions.length === 0 ? (
@@ -342,6 +369,20 @@ export default function CalendarioPage() {
       {wizardOpen && (
         <ProgramWizard onClose={() => setWizardOpen(false)} onCreated={onProgramCreated} />
       )}
+
+      <DuplicateWeekSheet
+        open={dupOpen}
+        weekStart={weekStart}
+        sessionCount={weekSessionCount}
+        onClose={() => setDupOpen(false)}
+        onDone={(created) => {
+          setDupOpen(false);
+          toast.success(
+            `Se programaron ${plural(created, 'sesión', 'sesiones')}.`,
+          );
+          reload();
+        }}
+      />
 
       {registering && (
         <ActivityForm
