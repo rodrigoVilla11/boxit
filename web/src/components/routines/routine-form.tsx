@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  Calculator,
   ChevronLeft,
   Dumbbell,
   GripVertical,
@@ -31,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
 import { ExercisePicker } from '@/components/workout/exercise-picker';
+import { PlateCalculator } from '@/components/workout/plate-calculator';
 import { useUnit } from '@/components/unit-provider';
 import {
   displayToKg,
@@ -357,6 +359,7 @@ function SortableItemCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: it.key });
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -483,17 +486,27 @@ function SortableItemCard({
             <p className="mb-1 text-[11px] font-medium text-textMuted">
               Peso ({unitLabel(unit)})
             </p>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={it.weight}
-              onChange={(e) =>
-                onPatch({ weight: e.target.value.replace(/[^\d.,]/g, '').slice(0, 7) })
-              }
-              placeholder="—"
-              aria-label="Peso objetivo"
-              className={numberInputCls}
-            />
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={it.weight}
+                onChange={(e) =>
+                  onPatch({ weight: e.target.value.replace(/[^\d.,]/g, '').slice(0, 7) })
+                }
+                placeholder="—"
+                aria-label="Peso objetivo"
+                className={numberInputCls}
+              />
+              <button
+                type="button"
+                onClick={() => setCalcOpen(true)}
+                aria-label={`Cómo armar el peso de ${it.exercise.name}`}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-textMuted ring-1 ring-white/5 transition hover:text-primary active:scale-95"
+              >
+                <Calculator className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -539,6 +552,14 @@ function SortableItemCard({
             />
           </div>
         </div>
+
+        {calcOpen && (
+          <PlateCalculator
+            weightKg={displayToKg(floatOrNull(it.weight) ?? 0, unit)}
+            equipment={it.exercise.equipment}
+            onClose={() => setCalcOpen(false)}
+          />
+        )}
       </section>
     </div>
   );

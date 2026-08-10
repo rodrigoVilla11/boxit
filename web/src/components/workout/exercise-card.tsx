@@ -175,6 +175,7 @@ export function ExerciseCard({
             set={set}
             previous={previousForRow[i]}
             target={{ weight: we.targetWeight, reps: we.targetReps }}
+            equipment={we.exercise.equipment}
             isPr={set.id === prSetId}
             onSave={onSaveSet}
             onRemove={onRemoveSet}

@@ -48,6 +48,7 @@ export function SetRow({
   set,
   previous,
   target,
+  equipment,
   isPr = false,
   onSave,
   onRemove,
@@ -58,6 +59,8 @@ export function SetRow({
   set: WorkoutSet;
   previous?: PreviousSet;
   target?: { weight: number | null; reps: number | null };
+  /** Equipamiento del ejercicio: define el modo inicial del simulador de peso. */
+  equipment?: string | null;
   isPr?: boolean;
   onSave: (setId: string, patch: SetPatch) => void;
   onRemove: (setId: string) => void;
@@ -166,7 +169,7 @@ export function SetRow({
           </MenuItem>
           <MenuItem onClick={() => setShowPlates(true)}>
             <Calculator className="h-4 w-4" />
-            Calculadora de discos
+            Cómo armar el peso
           </MenuItem>
           {SET_TYPES.map((t) => (
             <MenuItem key={t.type} onClick={() => onSave(set.id, { type: t.type })}>
@@ -315,6 +318,7 @@ export function SetRow({
       {showPlates && (
         <PlateCalculator
           weightKg={displayToKg(parseFloatSafe(weight), unit)}
+          equipment={equipment}
           onClose={() => setShowPlates(false)}
         />
       )}
