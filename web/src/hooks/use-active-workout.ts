@@ -166,14 +166,24 @@ export function useActiveWorkout(): UseActiveWorkout {
       ts: now(),
     });
 
-  const addSet = (workoutExerciseId: string) =>
-    runCommit({
+  // La serie nueva arranca con el peso/reps de la última del ejercicio, así no
+  // hay que volver a tipear lo mismo serie tras serie.
+  const addSet = (workoutExerciseId: string) => {
+    const sets = workout?.exercises.find((e) => e.id === workoutExerciseId)?.sets ?? [];
+    const last = sets.reduce<(typeof sets)[number] | null>(
+      (acc, s) => (acc === null || s.order > acc.order ? s : acc),
+      null,
+    );
+    return runCommit({
       kind: 'addSet',
       workoutId: guardedId(),
       weId: workoutExerciseId,
       setId: uuid(),
+      weight: last?.weight ?? 0,
+      reps: last?.reps ?? 0,
       ts: now(),
     });
+  };
 
   const removeSet = (setId: string) =>
     runCommit({ kind: 'removeSet', workoutId: guardedId(), setId, ts: now() });

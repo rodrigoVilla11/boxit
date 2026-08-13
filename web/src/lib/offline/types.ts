@@ -21,7 +21,16 @@ export type Op =
       exercise: Exercise;
       ts: number;
     }
-  | { kind: 'addSet'; workoutId: string; weId: string; setId: string; ts: number }
+  // weight/reps: arrastre de la serie anterior del mismo ejercicio (0 si no hay)
+  | {
+      kind: 'addSet';
+      workoutId: string;
+      weId: string;
+      setId: string;
+      weight: number;
+      reps: number;
+      ts: number;
+    }
   | { kind: 'updateSet'; workoutId: string; setId: string; patch: SetPatch; ts: number }
   | { kind: 'updateWorkout'; workoutId: string; patch: WorkoutPatch; ts: number }
   | { kind: 'setSuperset'; workoutId: string; weId: string; group: number | null; ts: number }

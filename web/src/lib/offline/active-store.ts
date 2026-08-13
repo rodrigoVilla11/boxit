@@ -73,7 +73,12 @@ export async function syncOp(op: QueuedOp): Promise<void> {
       });
       return;
     case 'addSet':
-      await api.addSet(op.workoutId, op.weId, { id: op.setId });
+      await api.addSet(op.workoutId, op.weId, {
+        id: op.setId,
+        // ?? 0: ops encoladas por una versión anterior no traen arrastre
+        weight: op.weight ?? 0,
+        reps: op.reps ?? 0,
+      });
       return;
     case 'updateSet':
       await api.updateSet(op.workoutId, op.setId, op.patch);

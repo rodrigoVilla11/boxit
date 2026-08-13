@@ -218,11 +218,11 @@ export async function setSuperset(
 export async function addSet(
   id: string,
   workoutExerciseId: string,
-  ids?: { id?: string },
+  init?: { id?: string; weight?: number; reps?: number },
 ): Promise<Workout> {
   const res = await apiFetch(
     `/api/workouts/${id}/exercises/${workoutExerciseId}/sets`,
-    { method: 'POST', body: JSON.stringify(ids ?? {}) },
+    { method: 'POST', body: JSON.stringify(init ?? {}) },
   );
   return json<Workout>(res, 'No pudimos agregar la serie.');
 }

@@ -5,13 +5,17 @@ function nextOrder(items: { order: number }[]): number {
   return items.reduce((m, i) => Math.max(m, i.order), 0) + 1;
 }
 
-function freshSet(id: string, order: number): WorkoutSet {
+function freshSet(
+  id: string,
+  order: number,
+  seed: { weight: number; reps: number } = { weight: 0, reps: 0 },
+): WorkoutSet {
   return {
     id,
     order,
     type: 'NORMAL',
-    weight: 0,
-    reps: 0,
+    weight: seed.weight,
+    reps: seed.reps,
     completed: false,
     completedAt: null,
     rpe: null,
@@ -112,7 +116,17 @@ export function applyOp(doc: Workout | null, op: Op): Workout | null {
         ...doc,
         exercises: doc.exercises.map((e) =>
           e.id === op.weId
-            ? { ...e, sets: [...e.sets, freshSet(op.setId, nextOrder(e.sets))] }
+            ? {
+                ...e,
+                sets: [
+                  ...e.sets,
+                  // ?? 0: ops encoladas por una versión anterior no traen arrastre
+                  freshSet(op.setId, nextOrder(e.sets), {
+                    weight: op.weight ?? 0,
+                    reps: op.reps ?? 0,
+                  }),
+                ],
+              }
             : e,
         ),
       };
