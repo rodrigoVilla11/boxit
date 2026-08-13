@@ -127,6 +127,9 @@ export class RoutinesService {
     return this.prisma.workout.create({
       data: {
         userId,
+        // deja el rastro de qué rutina se hizo (lo usa el calendario para saber
+        // qué sesión programada quedó cumplida)
+        routineId: routine.id,
         exercises: {
           create: routine.exercises.map((re) => ({
             exerciseId: re.exerciseId,

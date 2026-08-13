@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CalendarPlus,
+  Check,
   ClipboardCheck,
   CopyPlus,
+  Dumbbell,
   Loader2,
   Play,
   Plus,
@@ -30,6 +32,14 @@ import {
 import { ProgramWizard } from '@/components/calendar/program-wizard';
 import { DuplicateWeekSheet } from '@/components/calendar/duplicate-week-sheet';
 import { plural } from '@/lib/plural';
+import { cn } from '@/lib/cn';
+import { activityIcon } from '@/lib/activity';
+import {
+  computeDayCompletion,
+  toEfforts,
+  type DayCompletion,
+  type SessionOutcome,
+} from '@/lib/session-completion';
 import { dayKey, mondayOf, startOfDay } from '@/lib/week';
 import { getRoutines, startRoutine, type Routine } from '@/lib/routines';
 import { getCardioRoutines, type CardioRoutine } from '@/lib/cardio-routines';
@@ -48,6 +58,14 @@ import {
 
 const fmtDay = (d: Date): string =>
   d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+
+/** "mié 12" a partir de un dayKey (para el texto de recuperada). */
+const fmtDayKey = (k: number | null): string => {
+  if (k === null) return '';
+  const d = startOfDay(new Date());
+  d.setDate(d.getDate() + (k - dayKey(d)));
+  return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' });
+};
 
 export default function CalendarioPage() {
   const router = useRouter();
@@ -121,14 +139,22 @@ export default function CalendarioPage() {
     return n;
   }, [weekStart, sessionsByDay]);
 
-  const doneDays = useMemo(() => {
-    const set = new Set<number>();
-    for (const w of history) if (w.finishedAt) set.add(dayKey(new Date(w.finishedAt)));
-    for (const a of activities) set.add(dayKey(new Date(a.performedAt)));
-    return set;
-  }, [history, activities]);
+  // Qué sesión programada cumplió cada entreno/actividad (por rutina, no por día)
+  const completion = useMemo(() => {
+    const { start, end } = monthGridRange(month);
+    return computeDayCompletion(sessions ?? [], toEfforts(history, activities), {
+      fromK: dayKey(start),
+      toK: dayKey(end),
+    });
+  }, [month, sessions, history, activities]);
 
   const daySessions = sessionsByDay.get(dayKey(selected)) ?? [];
+  const dayCompletion: DayCompletion | undefined = completion.get(dayKey(selected));
+  const outcomeById = useMemo(() => {
+    const map = new Map<string, SessionOutcome>();
+    for (const o of dayCompletion?.outcomes ?? []) map.set(o.session.id, o);
+    return map;
+  }, [dayCompletion]);
 
   async function onStart(s: ScheduledSession) {
     if (!s.routineId || starting) return;
@@ -210,8 +236,7 @@ export default function CalendarioPage() {
         <>
           <MonthGrid
             month={month}
-            sessionsByDay={sessionsByDay}
-            doneDays={doneDays}
+            completion={completion}
             selected={selected}
             onSelect={setSelected}
             onMonthChange={setMonth}
@@ -222,6 +247,18 @@ export default function CalendarioPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold capitalize text-textMuted">
                 {dayTitle}
+                {dayCompletion && dayCompletion.planned > 0 && (
+                  <span
+                    className={cn(
+                      'ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold normal-case',
+                      dayCompletion.done === dayCompletion.planned
+                        ? 'bg-accentLime/15 text-accentLime'
+                        : 'bg-surfaceRaised text-textMuted',
+                    )}
+                  >
+                    {dayCompletion.done} de {dayCompletion.planned}
+                  </span>
+                )}
               </h2>
               <div className="flex shrink-0 items-center gap-2">
                 {weekSessionCount > 0 && (
@@ -245,15 +282,26 @@ export default function CalendarioPage() {
               </div>
             </div>
 
-            {daySessions.length === 0 ? (
+            {daySessions.length === 0 && !dayCompletion?.extras.length ? (
               <p className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-sm text-textMuted">
                 Nada programado este día.
               </p>
             ) : (
-              daySessions.map((s) => (
+              daySessions.map((s) => {
+                const status = outcomeById.get(s.id)?.status ?? 'pending';
+                const doneOnK = outcomeById.get(s.id)?.doneOnK ?? null;
+                const fulfilled = status === 'done' || status === 'madeUp';
+                return (
                 <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surfaceRaised text-primary">
-                    <SessionIcon s={s} />
+                  <span
+                    className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                      fulfilled
+                        ? 'bg-accentLime/15 text-accentLime'
+                        : 'bg-surfaceRaised text-primary',
+                    )}
+                  >
+                    {fulfilled ? <Check className="h-5 w-5" /> : <SessionIcon s={s} />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-text">
@@ -264,13 +312,31 @@ export default function CalendarioPage() {
                         {sessionSubtitle(s)}
                       </p>
                     )}
+                    <p
+                      className={cn(
+                        'mt-0.5 text-[11px] font-semibold',
+                        fulfilled
+                          ? 'text-accentLime'
+                          : status === 'missed'
+                            ? 'text-textMuted'
+                            : 'text-primary/80',
+                      )}
+                    >
+                      {status === 'done'
+                        ? 'Cumplida'
+                        : status === 'madeUp'
+                          ? `Recuperada el ${fmtDayKey(doneOnK)}`
+                          : status === 'missed'
+                            ? 'Sin hacer'
+                            : 'Pendiente'}
+                    </p>
                     {s.program && (
                       <p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-primary/80">
                         {s.program.name}
                       </p>
                     )}
                   </div>
-                  {s.kind === 'ROUTINE' && s.routineId && (
+                  {!fulfilled && s.kind === 'ROUTINE' && s.routineId && (
                     <button
                       type="button"
                       onClick={() => onStart(s)}
@@ -284,7 +350,7 @@ export default function CalendarioPage() {
                       )}
                     </button>
                   )}
-                  {s.kind === 'ACTIVITY' && (
+                  {!fulfilled && s.kind === 'ACTIVITY' && (
                     <button
                       type="button"
                       onClick={() => onRegister(s)}
@@ -303,8 +369,34 @@ export default function CalendarioPage() {
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-              ))
+                );
+              })
             )}
+
+            {/* Hecho ese día pero fuera del plan: cuenta para la constancia,
+                no cierra ninguna sesión programada. */}
+            {dayCompletion?.extras.map((e) => {
+              const Icon =
+                e.kind === 'ACTIVITY' && e.activityType
+                  ? activityIcon(e.activityType)
+                  : Dumbbell;
+              return (
+                <div
+                  key={e.id}
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-accentLime/25 bg-surface/50 p-3"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accentLime/10 text-accentLime/70">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-text">{e.label}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-textMuted">
+                      No agendado
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </section>
 
           {/* Programas */}

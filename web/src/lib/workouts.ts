@@ -294,6 +294,9 @@ export type WorkoutSummary = {
   durationSec: number;
   totalVolume: number;
   totalSets: number;
+  // rutina de origen; null si fue un entreno suelto (o si la rutina se borró)
+  routineId: string | null;
+  routine: { id: string; name: string } | null;
   exercises: WorkoutExerciseSummary[];
 };
 

@@ -5,7 +5,7 @@ import { Flame, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { getHistory, type WorkoutSummary } from '@/lib/workouts';
 import { getActivities, type Activity } from '@/lib/activities';
-import { DAY, dayKey, mondayOf, startOfDay } from '@/lib/week';
+import { DAY, WEEKDAY_LABELS, dayKey, mondayOf, startOfDay } from '@/lib/week';
 
 const WEEKS = 13;
 
@@ -22,7 +22,7 @@ export function CalendarHeatmap() {
       .catch(() => setActivities([]));
   }, []);
 
-  const { columns, streak, total } = useMemo(() => {
+  const { rows, streak, total } = useMemo(() => {
     const perDay = new Map<number, number>();
     const trainedWeeks = new Set<number>();
     const mark = (iso: string | null | undefined) => {
@@ -37,19 +37,22 @@ export function CalendarHeatmap() {
 
     const today = new Date();
     const thisMonday = mondayOf(today);
-    const columns: { key: number; count: number; future: boolean }[][] = [];
+    // una fila por semana (la más vieja arriba), y dentro de cada fila los días
+    // de lunes a domingo: se lee de izquierda a derecha y de arriba hacia abajo
+    const rows: { key: number; count: number; future: boolean }[][] = [];
     for (let w = WEEKS - 1; w >= 0; w--) {
-      const col: { key: number; count: number; future: boolean }[] = [];
+      const row: { key: number; count: number; future: boolean }[] = [];
       for (let d = 0; d < 7; d++) {
-        const cell = new Date(thisMonday.getTime() + (-w * 7 + d) * DAY);
+        const cell = new Date(thisMonday);
+        cell.setDate(cell.getDate() - w * 7 + d);
         const future = startOfDay(cell) > startOfDay(today);
-        col.push({
+        row.push({
           key: dayKey(cell),
           count: future ? 0 : perDay.get(dayKey(cell)) ?? 0,
           future,
         });
       }
-      columns.push(col);
+      rows.push(row);
     }
 
     // racha: semanas consecutivas con ≥1 entreno (la semana actual puede estar
@@ -61,10 +64,8 @@ export function CalendarHeatmap() {
       w++;
     }
 
-    const total = columns
-      .flat()
-      .reduce((n, c) => n + (c.future ? 0 : c.count), 0);
-    return { columns, streak, total };
+    const total = rows.flat().reduce((n, c) => n + (c.future ? 0 : c.count), 0);
+    return { rows, streak, total };
   }, [history, activities]);
 
   return (
@@ -83,27 +84,33 @@ export function CalendarHeatmap() {
         </div>
       ) : (
         <>
-          <div className="flex justify-between gap-[3px]">
-            {columns.map((col, ci) => (
-              <div key={ci} className="flex flex-1 flex-col gap-[3px]">
-                {col.map((cell) => (
-                  <div
-                    key={cell.key}
-                    className={cn(
-                      'aspect-square rounded-[3px]',
-                      cell.future
-                        ? 'bg-transparent'
-                        : cell.count === 0
-                          ? 'bg-surfaceRaised'
-                          : cell.count === 1
-                            ? 'bg-primary/55'
-                            : cell.count === 2
-                              ? 'bg-primary/85'
-                              : 'bg-accentLime',
-                    )}
-                  />
-                ))}
+          <div className="grid grid-cols-7 gap-[3px]">
+            {WEEKDAY_LABELS.map((label) => (
+              <div
+                key={label}
+                className="mb-0.5 text-center text-[10px] font-medium text-textMuted"
+              >
+                {label[0]}
               </div>
+            ))}
+            {rows.flat().map((cell) => (
+              <div
+                key={cell.key}
+                className={cn(
+                  // rectángulos (no cuadrados): con 7 columnas y 13 filas, los
+                  // cuadrados harían la tarjeta el doble de alta que el resto
+                  'aspect-[2/1] rounded-[3px]',
+                  cell.future
+                    ? 'bg-transparent'
+                    : cell.count === 0
+                      ? 'bg-surfaceRaised'
+                      : cell.count === 1
+                        ? 'bg-primary/55'
+                        : cell.count === 2
+                          ? 'bg-primary/85'
+                          : 'bg-accentLime',
+                )}
+              />
             ))}
           </div>
           <p className="mt-3 text-xs text-textMuted">

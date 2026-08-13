@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { DAY, dayKey, mondayOf, startOfDay, WEEKDAY_LABELS } from '@/lib/week';
-import type { ScheduledSession } from '@/lib/schedule';
+import { dayKey, mondayOf, WEEKDAY_LABELS } from '@/lib/week';
+import type { DayCompletion, SessionStatus } from '@/lib/session-completion';
 
 const MONTHS = [
   'Enero',
@@ -28,17 +28,25 @@ export function monthGridRange(month: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
+/** Color del puntito de una sesión programada según cómo terminó. */
+const STATUS_DOT: Record<SessionStatus, string> = {
+  done: 'bg-accentLime',
+  madeUp: 'bg-accentLime',
+  pending: 'bg-primary',
+  missed: 'bg-textMuted/40',
+};
+
+const MAX_DOTS = 4;
+
 export function MonthGrid({
   month,
-  sessionsByDay,
-  doneDays,
+  completion,
   selected,
   onSelect,
   onMonthChange,
 }: {
   month: Date; // primer día del mes visible
-  sessionsByDay: Map<number, ScheduledSession[]>;
-  doneDays: Set<number>; // dayKey con entreno o actividad real
+  completion: Map<number, DayCompletion>; // por dayKey: programado vs. hecho
   selected: Date;
   onSelect: (d: Date) => void;
   onMonthChange: (m: Date) => void;
@@ -93,10 +101,19 @@ export function MonthGrid({
         {cells.map((d) => {
           const k = dayKey(d);
           const inMonth = d.getMonth() === month.getMonth();
-          const sessions = sessionsByDay.get(k) ?? [];
-          const planned = sessions.length > 0;
-          const done = doneDays.has(k);
-          const missed = planned && !done && k < todayK;
+          const day = completion.get(k);
+          // un puntito por sesión programada (color según su estado) y luego los
+          // "no agendado"; si sobran, el resto se recorta
+          const dots = [
+            ...(day?.outcomes ?? []).map((o) => ({
+              key: o.session.id,
+              className: STATUS_DOT[o.status],
+            })),
+            ...(day?.extras ?? []).map((e) => ({
+              key: e.id,
+              className: 'bg-accentLime/35',
+            })),
+          ].slice(0, MAX_DOTS);
           return (
             <button
               key={k}
@@ -122,31 +139,30 @@ export function MonthGrid({
                 {d.getDate()}
               </span>
               <span className="flex h-1.5 items-center gap-0.5">
-                {done ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-accentLime" />
-                ) : (
-                  sessions.slice(0, 3).map((s) => (
-                    <span
-                      key={s.id}
-                      className={cn(
-                        'h-1.5 w-1.5 rounded-full',
-                        missed ? 'bg-textMuted/40' : 'bg-primary',
-                      )}
-                    />
-                  ))
-                )}
+                {dots.map((dot) => (
+                  <span
+                    key={dot.key}
+                    className={cn('h-1.5 w-1.5 rounded-full', dot.className)}
+                  />
+                ))}
               </span>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-3 text-[10px] text-textMuted">
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[10px] text-textMuted">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Programado
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-accentLime" /> Entrenado
+          <span className="h-1.5 w-1.5 rounded-full bg-accentLime" /> Cumplido
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-accentLime/35" /> No agendado
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-textMuted/40" /> Sin hacer
         </span>
       </div>
     </div>

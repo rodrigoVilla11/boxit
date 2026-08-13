@@ -167,6 +167,7 @@ model Routine {
   exercises RoutineExercise[]
   planItems PlanItem[] // referencias desde planes semanales
   scheduledSessions ScheduledSession[] // referencias desde el calendario
+  workouts  Workout[] // entrenos que se empezaron desde esta rutina
 
   @@index([userId])
 }
@@ -195,6 +196,9 @@ model RoutineExercise {
 model Workout {
   id          String    @id @default(cuid())
   userId      String
+  // Rutina desde la que se empezó el entreno; null si fue un entreno suelto.
+  // Es lo que permite al calendario saber CUÁL sesión programada se cumplió.
+  routineId   String?
   title       String? // nombre opcional de la sesión ("Push pesado")
   note        String? // cómo salió el entreno
   startedAt   DateTime  @default(now())
@@ -206,8 +210,11 @@ model Workout {
 
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises WorkoutExercise[]
+  // Borrar la rutina no borra el entreno hecho (queda como sesión suelta).
+  routine   Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
 
   @@index([userId, startedAt])
+  @@index([routineId])
 }
 
 model WorkoutExercise {

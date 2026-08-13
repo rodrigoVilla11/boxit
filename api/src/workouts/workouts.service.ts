@@ -35,8 +35,11 @@ export type FullWorkout = Prisma.WorkoutGetPayload<{
 }>;
 
 // Resumen para el historial: ejercicios (con su info) pero sin las series.
+// La rutina de origen viaja para que el calendario empareje cada entreno con la
+// sesión programada correspondiente.
 const historyInclude = {
   exercises: { orderBy: { order: 'asc' }, include: { exercise: true } },
+  routine: { select: { id: true, name: true } },
 } satisfies Prisma.WorkoutInclude;
 
 export type WorkoutSummary = Prisma.WorkoutGetPayload<{
@@ -438,6 +441,9 @@ export class WorkoutsService {
     const created = await this.prisma.workout.create({
       data: {
         userId,
+        // repetir mantiene la rutina de origen: si no, el calendario no podría
+        // reconocer la sesión programada que este entreno cumple
+        routineId: source.routineId,
         exercises: {
           create: source.exercises.map((we) => ({
             exerciseId: we.exerciseId,
