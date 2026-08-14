@@ -1,10 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { History, Link2, MoreVertical, Plus, Replace, Trash2, Unlink } from 'lucide-react';
+import {
+  Calculator,
+  History,
+  Link2,
+  MoreVertical,
+  Plus,
+  Replace,
+  Trash2,
+  Unlink,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { ExerciseHistorySheet } from '@/components/progress/exercise-history-sheet';
+import { PlateCalculator } from './plate-calculator';
 import { SetRow } from './set-row';
 import { useUnit } from '@/components/unit-provider';
 import { kgToDisplay, roundDisplay, unitLabel } from '@/lib/units';
@@ -51,6 +61,13 @@ export function ExerciseCard({
 }) {
   const { unit } = useUnit();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [platesOpen, setPlatesOpen] = useState(false);
+
+  // Peso con el que abre el simulador: el de la serie que estás por hacer (la
+  // primera sin completar); si ya están todas, el de la última. La meta de la
+  // rutina es el respaldo cuando todavía no cargaste nada.
+  const nextSet = we.sets.find((s) => !s.completed) ?? we.sets[we.sets.length - 1];
+  const platesWeightKg = nextSet?.weight || we.targetWeight || 0;
 
   // Guía de la rutina (si el entreno salió de una): "Meta 8-12 reps · 80 kg"
   const targetText = [
@@ -124,38 +141,48 @@ export function ExerciseCard({
             )}
           </div>
         </div>
-        <Menu
-          label="Opciones del ejercicio"
-          trigger={
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg text-textMuted hover:text-text">
-              <MoreVertical className="h-5 w-5" />
-            </span>
-          }
-        >
-          <MenuItem onClick={() => setHistoryOpen(true)}>
-            <History className="h-4 w-4" />
-            Ver historial
-          </MenuItem>
-          <MenuItem onClick={() => onReplaceExercise(we.id)}>
-            <Replace className="h-4 w-4" />
-            Reemplazar ejercicio
-          </MenuItem>
-          {superset.letter ? (
-            <MenuItem onClick={() => onUngroup(we.id)}>
-              <Unlink className="h-4 w-4" />
-              Quitar de la superserie
+        <div className="flex shrink-0 items-center">
+          <button
+            type="button"
+            onClick={() => setPlatesOpen(true)}
+            aria-label={`Cómo armar el peso de ${we.exercise.name}`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-textMuted transition hover:text-primary active:scale-90"
+          >
+            <Calculator className="h-[18px] w-[18px]" />
+          </button>
+          <Menu
+            label="Opciones del ejercicio"
+            trigger={
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg text-textMuted hover:text-text">
+                <MoreVertical className="h-5 w-5" />
+              </span>
+            }
+          >
+            <MenuItem onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4" />
+              Ver historial
             </MenuItem>
-          ) : canGroupNext ? (
-            <MenuItem onClick={() => onGroupWithNext(we.id)}>
-              <Link2 className="h-4 w-4" />
-              Agrupar con el siguiente
+            <MenuItem onClick={() => onReplaceExercise(we.id)}>
+              <Replace className="h-4 w-4" />
+              Reemplazar ejercicio
             </MenuItem>
-          ) : null}
-          <MenuItem danger onClick={() => onRemoveExercise(we.id)}>
-            <Trash2 className="h-4 w-4" />
-            Quitar ejercicio
-          </MenuItem>
-        </Menu>
+            {superset.letter ? (
+              <MenuItem onClick={() => onUngroup(we.id)}>
+                <Unlink className="h-4 w-4" />
+                Quitar de la superserie
+              </MenuItem>
+            ) : canGroupNext ? (
+              <MenuItem onClick={() => onGroupWithNext(we.id)}>
+                <Link2 className="h-4 w-4" />
+                Agrupar con el siguiente
+              </MenuItem>
+            ) : null}
+            <MenuItem danger onClick={() => onRemoveExercise(we.id)}>
+              <Trash2 className="h-4 w-4" />
+              Quitar ejercicio
+            </MenuItem>
+          </Menu>
+        </div>
       </header>
 
       {/* Encabezado de columnas */}
@@ -201,6 +228,14 @@ export function ExerciseCard({
           exerciseId={we.exerciseId}
           exerciseName={we.exercise.name}
           onClose={() => setHistoryOpen(false)}
+        />
+      )}
+
+      {platesOpen && (
+        <PlateCalculator
+          weightKg={platesWeightKg}
+          equipment={we.exercise.equipment}
+          onClose={() => setPlatesOpen(false)}
         />
       )}
     </section>

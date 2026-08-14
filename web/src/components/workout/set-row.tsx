@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -344,6 +344,10 @@ function Spinner({
   onBlur: () => void;
   onStep: (dir: 1 | -1) => void;
 }) {
+  // Al enfocar, la primera tecla reemplaza el valor entero. No usamos select():
+  // la selección programática abre el menú del sistema (Deshacer/Pegar) en móvil.
+  const replaceOnInput = useRef(false);
+
   return (
     <div className="relative">
       <input
@@ -352,8 +356,22 @@ function Spinner({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={(e) => e.currentTarget.select()}
-        onBlur={onBlur}
+        onFocus={() => {
+          replaceOnInput.current = true;
+        }}
+        onBeforeInput={(e) => {
+          if (!replaceOnInput.current) return;
+          replaceOnInput.current = false;
+          const data = (e.nativeEvent as InputEvent).data;
+          if (data) {
+            e.preventDefault();
+            onChange(data);
+          }
+        }}
+        onBlur={() => {
+          replaceOnInput.current = false;
+          onBlur();
+        }}
         aria-label={ariaLabel}
         className="h-11 w-full rounded-lg bg-surfaceRaised pl-1.5 pr-6 text-center text-sm text-text outline-none focus:ring-2 focus:ring-primary"
       />
