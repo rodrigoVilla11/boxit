@@ -98,6 +98,11 @@ export function SetRow({
   const unchanged = (d: { kg: number; reps: number }) =>
     Math.abs(d.kg - set.weight) < 1e-4 && d.reps === set.reps;
 
+  // Valores del placeholder (lo que se VE cuando el input está vacío): el
+  // "anterior" primero; si no, la meta de la rutina. Peso siempre en kg.
+  const placeholderKg = previous ? previous.weight : (target?.weight ?? 0);
+  const placeholderReps = previous ? previous.reps : (target?.reps ?? 0);
+
   const persist = () => {
     const d = draft();
     if (unchanged(d)) return;
@@ -106,22 +111,33 @@ export function SetRow({
 
   const toggleComplete = () => {
     const d = draft();
+    // Completar con un input vacío compromete el valor visible del placeholder
+    // (anterior o meta); si no, la serie quedaba anotada con peso 0.
+    const kg = !set.completed && weight.trim() === '' ? placeholderKg : d.kg;
+    const rp = !set.completed && reps.trim() === '' ? placeholderReps : d.reps;
     onSave(
       set.id,
-      unchanged(d)
+      unchanged({ kg, reps: rp })
         ? { completed: !set.completed }
-        : { completed: !set.completed, weight: d.kg, reps: d.reps },
+        : { completed: !set.completed, weight: kg, reps: rp },
     );
   };
 
   const stepWeight = (delta: number) => {
-    const next = Math.max(0, roundDisplay(parseFloatSafe(weight) + delta));
+    // El stepper arranca del valor visible: lo tipeado o, si está vacío, el
+    // placeholder (anterior o meta), no 0.
+    const base =
+      weight.trim() === ''
+        ? roundDisplay(kgToDisplay(placeholderKg, unit))
+        : parseFloatSafe(weight);
+    const next = Math.max(0, roundDisplay(base + delta));
     setWeight(next === 0 ? '' : String(next));
     onSave(set.id, { weight: displayToKg(next, unit), reps: parseIntSafe(reps) });
   };
 
   const stepReps = (delta: number) => {
-    const next = Math.max(0, parseIntSafe(reps) + delta);
+    const base = reps.trim() === '' ? placeholderReps : parseIntSafe(reps);
+    const next = Math.max(0, base + delta);
     setReps(next === 0 ? '' : String(next));
     onSave(set.id, {
       weight: displayToKg(parseFloatSafe(weight), unit),
