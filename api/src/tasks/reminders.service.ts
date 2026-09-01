@@ -120,7 +120,7 @@ export class RemindersService {
     });
 
     const dow = this.localDow(nowMs, offsetMin);
-    const items = (plan?.items ?? []).filter(
+    const allItems = (plan?.items ?? []).filter(
       (i) => i.dayOfWeek === dow && i.kind !== 'REST',
     );
 
@@ -137,6 +137,19 @@ export class RemindersService {
         cardioRoutine: { select: { name: true } },
       },
     });
+
+    // Aplicar el plan al calendario materializa sus ítems como sesiones: si la
+    // sesión de hoy ya cubre un ítem del plan, no se lo nombra dos veces.
+    const items = allItems.filter(
+      (i) =>
+        !sessions.some((s) =>
+          i.kind === 'ROUTINE'
+            ? s.routineId !== null && s.routineId === i.routineId
+            : i.cardioRoutineId
+              ? s.cardioRoutineId === i.cardioRoutineId
+              : s.kind === 'ACTIVITY' && s.activityType === i.activityType,
+        ),
+    );
     if (items.length === 0 && sessions.length === 0) {
       return { sent: 0, message: null };
     }

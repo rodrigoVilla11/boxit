@@ -256,10 +256,26 @@ export default function EntrenoPage() {
 
   // Sin entreno activo → empezar
   if (!wo.workout) {
-    const todayItems = activePlan
-      ? activePlan.items.filter((i) => i.dayOfWeek === todayDow())
-      : [];
     const todaySched = todaySessions.filter((s) => s.kind !== 'REST');
+    // Aplicar el plan al calendario materializa sus ítems como sesiones: si la
+    // sesión de hoy ya cubre un ítem del plan, se muestra una sola vez (gana
+    // la sesión, que es la que trackea cumplimiento en el calendario).
+    const coveredBySession = (i: PlanItem): boolean =>
+      todaySched.some((s) =>
+        i.kind === 'ROUTINE'
+          ? s.routineId !== null && s.routineId === i.routineId
+          : i.cardioRoutineId
+            ? s.cardioRoutineId === i.cardioRoutineId
+            : s.kind === 'ACTIVITY' &&
+              sessionTargets(s).type === itemTargets(i).type,
+      );
+    const todayItems = activePlan
+      ? activePlan.items.filter(
+          (i) =>
+            i.dayOfWeek === todayDow() &&
+            (i.kind === 'REST' || !coveredBySession(i)),
+        )
+      : [];
     const hasPlan =
       todayItems.some((i) => i.kind !== 'REST') || todaySched.length > 0;
     const onlyRest =
