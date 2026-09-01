@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  CalendarDays,
   CalendarPlus,
   Check,
   ClipboardCheck,
   CopyPlus,
   Dumbbell,
+  Eraser,
   Loader2,
   Play,
   Plus,
@@ -31,6 +33,8 @@ import {
 } from '@/components/calendar/session-editor';
 import { ProgramWizard } from '@/components/calendar/program-wizard';
 import { DuplicateWeekSheet } from '@/components/calendar/duplicate-week-sheet';
+import { ApplyPlanSheet } from '@/components/calendar/apply-plan-sheet';
+import { ClearScheduleSheet } from '@/components/calendar/clear-schedule-sheet';
 import { plural } from '@/lib/plural';
 import { cn } from '@/lib/cn';
 import { activityIcon } from '@/lib/activity';
@@ -87,6 +91,8 @@ export default function CalendarioPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<TrainingProgram | null>(null);
   const [registering, setRegistering] = useState<ActivityPrefill | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
@@ -114,6 +120,15 @@ export default function CalendarioPage() {
     getCardioRoutines().then(setCardio).catch(() => {});
     getHistory().then(setHistory).catch(() => {});
     getActivities().then(setActivities).catch(() => {});
+  }, []);
+
+  // /calendario?aplicar=plan (desde Rutinas): abre el sheet de aplicar plan
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('aplicar') === 'plan') {
+      setApplyOpen(true);
+      window.history.replaceState(null, '', '/calendario');
+    }
   }, []);
 
   const sessionsByDay = useMemo(() => {
@@ -437,6 +452,14 @@ export default function CalendarioPage() {
             ))}
             <button
               type="button"
+              onClick={() => setApplyOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 py-3.5 text-sm font-semibold text-textMuted transition hover:border-primary/40 hover:text-primary active:scale-[0.99]"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Aplicar mi plan semanal
+            </button>
+            <button
+              type="button"
               onClick={() => setWizardOpen(true)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 py-3.5 text-sm font-semibold text-textMuted transition hover:border-primary/40 hover:text-primary active:scale-[0.99]"
             >
@@ -444,6 +467,15 @@ export default function CalendarioPage() {
               Programa pre-armado
             </button>
           </section>
+
+          <button
+            type="button"
+            onClick={() => setClearOpen(true)}
+            className="mx-auto flex items-center gap-1.5 pb-2 text-xs font-semibold text-textMuted transition hover:text-danger active:scale-95"
+          >
+            <Eraser className="h-3.5 w-3.5" />
+            Limpiar calendario
+          </button>
         </>
       )}
 
@@ -461,6 +493,34 @@ export default function CalendarioPage() {
       {wizardOpen && (
         <ProgramWizard onClose={() => setWizardOpen(false)} onCreated={onProgramCreated} />
       )}
+
+      {applyOpen && (
+        <ApplyPlanSheet
+          onClose={() => setApplyOpen(false)}
+          onCreated={(p) => {
+            setApplyOpen(false);
+            onProgramCreated(p);
+          }}
+        />
+      )}
+
+      <ClearScheduleSheet
+        open={clearOpen}
+        onClose={() => setClearOpen(false)}
+        onDone={(deleted) => {
+          setClearOpen(false);
+          toast.success(
+            deleted > 0
+              ? `Se ${deleted === 1 ? 'borró' : 'borraron'} ${plural(
+                  deleted,
+                  'sesión programada',
+                  'sesiones programadas',
+                )}.`
+              : 'No había nada programado para borrar.',
+          );
+          reload();
+        }}
+      />
 
       <DuplicateWeekSheet
         open={dupOpen}

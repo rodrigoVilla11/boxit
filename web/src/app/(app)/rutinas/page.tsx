@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   CalendarDays,
+  CalendarPlus,
   ClipboardList,
   Loader2,
   MoreVertical,
@@ -289,6 +290,10 @@ export default function RutinasPage() {
                           </span>
                         }
                       >
+                        <MenuItem onClick={() => router.push('/calendario?aplicar=plan')}>
+                          <CalendarPlus className="h-4 w-4" />
+                          Aplicar al calendario
+                        </MenuItem>
                         <MenuItem onClick={() => setPrompt('rename')}>
                           <Pencil className="h-4 w-4" />
                           Renombrar

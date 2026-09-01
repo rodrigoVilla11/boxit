@@ -9,6 +9,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { DuplicateWeekDto } from './dto/duplicate-week.dto';
+import { ClearScheduleDto } from './dto/clear-schedule.dto';
 import { ScheduledSessionInput } from './dto/scheduled-session.input';
 
 const fullSessionInclude = {
@@ -204,6 +205,27 @@ export class ScheduleService {
     }
     await this.prisma.scheduledSession.createMany({ data: rows });
     return { created: rows.length };
+  }
+
+  /**
+   * Borra lo programado (todo, o desde `from` inclusive). Los entrenos y
+   * actividades ya registrados no se tocan: sólo se vacía el calendario.
+   * Los programas que quedan sin sesiones se borran también (ya no listan nada).
+   */
+  async clearSchedule(
+    userId: string,
+    dto: ClearScheduleDto,
+  ): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.scheduledSession.deleteMany({
+      where: {
+        userId,
+        ...(dto.from ? { date: { gte: dateAtNoonUtc(dto.from) } } : {}),
+      },
+    });
+    await this.prisma.trainingProgram.deleteMany({
+      where: { userId, sessions: { none: {} } },
+    });
+    return { deleted: count };
   }
 
   async removeSession(userId: string, id: string): Promise<void> {

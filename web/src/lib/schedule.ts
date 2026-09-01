@@ -140,6 +140,22 @@ export async function duplicateWeek(
   return data.created;
 }
 
+/**
+ * Vacía el calendario: borra lo programado (desde `from` inclusive, o todo).
+ * Devuelve cuántas sesiones se borraron. No toca entrenos ya registrados.
+ */
+export async function clearSchedule(from?: Date): Promise<number> {
+  const res = await apiFetch('/api/schedule/clear', {
+    method: 'POST',
+    body: JSON.stringify(from ? { from: toDayStr(from) } : {}),
+  });
+  const data = await json<{ deleted: number }>(
+    res,
+    'No pudimos limpiar el calendario.',
+  );
+  return data.deleted;
+}
+
 export async function deleteSession(id: string): Promise<void> {
   const res = await apiFetch(`/api/schedule/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('No pudimos borrar la sesión.');
