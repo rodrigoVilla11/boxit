@@ -201,7 +201,11 @@ export function ExerciseCard({
             index={i}
             set={set}
             previous={previousForRow[i]}
-            target={{ weight: we.targetWeight, reps: we.targetReps }}
+            // con rango de reps (10-12) la sugerencia es el tope
+            target={{
+              weight: we.targetWeight,
+              reps: we.targetRepsMax ?? we.targetReps,
+            }}
             equipment={we.exercise.equipment}
             isPr={set.id === prSetId}
             onSave={onSaveSet}

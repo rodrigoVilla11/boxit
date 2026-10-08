@@ -140,13 +140,14 @@ export class RoutinesService {
             targetRepsMax: re.targetRepsMax,
             targetWeight: re.targetWeight,
             restSeconds: re.restSeconds,
-            // Prefila cada serie con los objetivos de la rutina (si los hay)
+            // Prefila cada serie con los objetivos de la rutina (si los hay).
+            // Con un rango (10-12) sugiere el tope: es a lo que se apunta.
             sets: {
               create: Array.from({ length: re.targetSets }, (_, i) => ({
                 order: i + 1,
                 type: 'NORMAL' as const,
                 weight: re.targetWeight ?? 0,
-                reps: re.targetReps ?? 0,
+                reps: re.targetRepsMax ?? re.targetReps ?? 0,
               })),
             },
           })),
